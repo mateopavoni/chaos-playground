@@ -38,6 +38,9 @@ npm-debug.log
 # Secrets
 .env
 
+# Cache del toolchain dockerizado (HOME montado del contenedor)
+/.home/
+
 # Meta de fábrica (no se publica) — ver .claude/modules/portfolio-pack.md §0
 .claude/
 PORTFOLIO.md
