@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: elixir:1.17
+    working_dir: /app
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      HOME: /app/.home
+      DB_HOST: db
+      PHX_HOST: localhost
+    volumes:
+      - .:/app
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: []
+    command: sh -c "mix local.hex --force --if-missing && mix local.rebar --force --if-missing && mix deps.get && mix phx.server"
+
+volumes:
+  db_data:
