@@ -1,0 +1,382 @@
+<div class="min-h-screen bg-base-100 text-base-content">
+  <.flash kind={:info} flash={@flash} />
+  <.flash kind={:error} flash={@flash} />
+
+  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 px-6 py-4">
+    <div>
+      <h1 class="font-display text-xl font-semibold tracking-tight">Chaos Playground</h1>
+      <p class="text-sm text-base-content/60">{@topology.name}</p>
+    </div>
+
+    <dl class="flex gap-6 font-data text-sm">
+      <div>
+        <dt class="text-xs uppercase tracking-wide text-base-content/50">RPS</dt>
+        <dd class="text-lg">{@metrics.rps}</dd>
+      </div>
+      <div>
+        <dt class="text-xs uppercase tracking-wide text-base-content/50">p99</dt>
+        <dd class="text-lg">{@metrics.p99_ms}ms</dd>
+      </div>
+      <div>
+        <dt class="text-xs uppercase tracking-wide text-base-content/50">Errores</dt>
+        <dd class={["text-lg", @metrics.error_rate > 0.1 && "text-status-dead"]}>
+          {round(@metrics.error_rate * 100)}%
+        </dd>
+      </div>
+    </dl>
+  </header>
+
+  <div class="flex flex-col gap-4 p-4 lg:flex-row">
+    <div class="flex-1 overflow-hidden rounded-lg border border-base-300 bg-base-200/40">
+      <div id="network-canvas" phx-hook=".NetworkCanvas" class="aspect-[2/1] w-full">
+        <svg viewBox="-30 -30 1010 460" class="h-full w-full">
+          <g>
+            <%= for {from_id, node} <- @nodes, to_id <- node.connections do %>
+              <% from_spec = node_position(@topology, from_id) %>
+              <% to_spec = node_position(@topology, to_id) %>
+              <%= if from_spec && to_spec do %>
+                <line
+                  x1={from_spec.x}
+                  y1={from_spec.y}
+                  x2={to_spec.x}
+                  y2={to_spec.y}
+                  stroke-width="2"
+                  class="cursor-pointer stroke-base-content/25 hover:stroke-primary"
+                  phx-click="select_edge"
+                  phx-value-from={from_id}
+                  phx-value-to={to_id}
+                />
+              <% end %>
+            <% end %>
+          </g>
+
+          <line
+            id="drag-preview"
+            phx-update="ignore"
+            class="pointer-events-none hidden stroke-primary"
+            stroke-width="2"
+            stroke-dasharray="4 3"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="0"
+          />
+
+          <g>
+            <%= for spec <- @topology.nodes do %>
+              <% node = Map.fetch!(@nodes, spec.id) %>
+              <g
+                data-node-id={spec.id}
+                transform={"translate(#{spec.x}, #{spec.y})"}
+                class="cursor-pointer"
+                phx-click="select_node"
+                phx-value-id={spec.id}
+              >
+                <circle
+                  r="26"
+                  stroke-width="2"
+                  stroke="currentColor"
+                  class={node_fill_class(node.status)}
+                />
+                <text
+                  text-anchor="middle"
+                  dy="-2"
+                  class="pointer-events-none select-none fill-base-100 font-data text-[10px] font-bold"
+                >
+                  {type_label(spec.type)}
+                </text>
+                <text
+                  text-anchor="middle"
+                  dy="42"
+                  class="pointer-events-none select-none fill-base-content/70 font-data text-[10px]"
+                >
+                  {spec.id}
+                </text>
+              </g>
+            <% end %>
+          </g>
+
+          <g id="particles" phx-update="ignore"></g>
+        </svg>
+
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".NetworkCanvas">
+          export default {
+            mounted() {
+              this.particles = this.el.querySelector("#particles");
+              this.dragPreview = this.el.querySelector("#drag-preview");
+              this.svg = this.el.querySelector("svg");
+              this.dragging = null;
+
+              this.handleEvent("packet_hop", ({ from, to, duration_ms }) => {
+                this.animateHop(from, to, duration_ms);
+              });
+
+              this.onPointerDown = (e) => {
+                const nodeEl = e.target.closest("[data-node-id]");
+                if (!nodeEl) return;
+                this.dragging = nodeEl.dataset.nodeId;
+                const [x, y] = this.nodeCenter(this.dragging);
+                this.setPreview(x, y, x, y);
+                this.dragPreview.classList.remove("hidden");
+              };
+
+              this.onPointerMove = (e) => {
+                if (!this.dragging) return;
+                const [x1, y1] = this.nodeCenter(this.dragging);
+                const p = this.toSvgPoint(e.clientX, e.clientY);
+                this.setPreview(x1, y1, p.x, p.y);
+              };
+
+              this.onPointerUp = (e) => {
+                if (!this.dragging) return;
+                const targetEl = e.target.closest && e.target.closest("[data-node-id]");
+                this.dragPreview.classList.add("hidden");
+                if (targetEl && targetEl.dataset.nodeId !== this.dragging) {
+                  this.pushEvent("connect_nodes", { from: this.dragging, to: targetEl.dataset.nodeId });
+                }
+                this.dragging = null;
+              };
+
+              this.el.addEventListener("pointerdown", this.onPointerDown);
+              this.el.addEventListener("pointermove", this.onPointerMove);
+              window.addEventListener("pointerup", this.onPointerUp);
+            },
+
+            destroyed() {
+              window.removeEventListener("pointerup", this.onPointerUp);
+            },
+
+            nodeCenter(id) {
+              const g = this.el.querySelector(`[data-node-id="${id}"]`);
+              if (!g) return [0, 0];
+              const m = g.getAttribute("transform").match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
+              return [parseFloat(m[1]), parseFloat(m[2])];
+            },
+
+            toSvgPoint(clientX, clientY) {
+              const pt = this.svg.createSVGPoint();
+              pt.x = clientX;
+              pt.y = clientY;
+              return pt.matrixTransform(this.svg.getScreenCTM().inverse());
+            },
+
+            setPreview(x1, y1, x2, y2) {
+              this.dragPreview.setAttribute("x1", x1);
+              this.dragPreview.setAttribute("y1", y1);
+              this.dragPreview.setAttribute("x2", x2);
+              this.dragPreview.setAttribute("y2", y2);
+            },
+
+            animateHop(fromId, toId, durationMs) {
+              const [x1, y1] = this.nodeCenter(fromId);
+              const [x2, y2] = this.nodeCenter(toId);
+
+              const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              dot.setAttribute("r", "4");
+              dot.setAttribute("cx", x1);
+              dot.setAttribute("cy", y1);
+              dot.setAttribute("class", "fill-primary");
+              this.particles.appendChild(dot);
+
+              const anim = dot.animate(
+                [{ transform: "translate(0px,0px)" }, { transform: `translate(${x2 - x1}px, ${y2 - y1}px)` }],
+                { duration: durationMs, easing: "linear", fill: "forwards" }
+              );
+              anim.onfinish = () => dot.remove();
+            }
+          };
+        </script>
+      </div>
+    </div>
+
+    <aside class="flex w-full flex-col gap-4 lg:w-80">
+      <section class="rounded-lg border border-base-300 bg-base-200/40 p-4">
+        <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-base-content/60">
+          Tráfico
+        </h2>
+
+        <div class="flex gap-2">
+          <button
+            phx-click="start_traffic"
+            disabled={@running?}
+            class="btn btn-sm btn-primary flex-1"
+          >
+            <.icon name="hero-play" class="size-4" /> Iniciar
+          </button>
+          <button phx-click="pause_traffic" disabled={!@running?} class="btn btn-sm flex-1">
+            <.icon name="hero-pause" class="size-4" /> Pausar
+          </button>
+        </div>
+
+        <label for="rps-input" class="mt-3 block text-xs text-base-content/60">
+          RPS objetivo: <span class="font-data">{@rps}</span>
+        </label>
+        <form id="rps-form" phx-change="set_rps">
+          <input
+            id="rps-input"
+            type="range"
+            name="rps"
+            min="0"
+            max="200"
+            value={@rps}
+            class="range range-primary range-sm"
+          />
+        </form>
+
+        <%= if length(@entry_candidates) > 1 do %>
+          <label for="entry-node-select" class="mt-3 block text-xs text-base-content/60">
+            Entrada de tráfico
+          </label>
+          <form id="entry-node-form" phx-change="set_entry_node">
+            <select id="entry-node-select" name="entry_node" class="select select-sm w-full">
+              <%= for id <- @entry_candidates do %>
+                <option value={id} selected={id == @entry_node}>{id}</option>
+              <% end %>
+            </select>
+          </form>
+        <% end %>
+      </section>
+
+      <section class="rounded-lg border border-base-300 bg-base-200/40 p-4">
+        <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-base-content/60">
+          Presets
+        </h2>
+
+        <div class="flex flex-col gap-2">
+          <%= for preset <- @builtin_presets do %>
+            <button
+              phx-click="load_preset"
+              phx-value-name={preset.name}
+              class="btn btn-outline btn-sm justify-start"
+            >
+              <.icon name="hero-squares-2x2" class="size-4" /> {preset.name}
+            </button>
+          <% end %>
+        </div>
+
+        <%= if @saved_presets != [] do %>
+          <div class="mt-3 flex flex-col gap-2 border-t border-base-300 pt-3">
+            <%= for saved <- @saved_presets do %>
+              <button
+                phx-click="load_saved"
+                phx-value-id={saved.id}
+                class="btn btn-ghost btn-sm justify-start"
+              >
+                <.icon name="hero-bookmark" class="size-4" /> {saved.name}
+              </button>
+            <% end %>
+          </div>
+        <% end %>
+
+        <form phx-submit="save_topology" class="mt-3 flex gap-2 border-t border-base-300 pt-3">
+          <input
+            type="text"
+            name="name"
+            placeholder="Nombre del preset"
+            required
+            class="input input-sm flex-1"
+          />
+          <button type="submit" class="btn btn-primary btn-sm">
+            <.icon name="hero-bookmark" class="size-4" />
+          </button>
+        </form>
+      </section>
+
+      <section class="rounded-lg border border-base-300 bg-base-200/40 p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-base-content/60">
+            Inspector
+          </h2>
+          <%= if @selected do %>
+            <button
+              phx-click="clear_selection"
+              class="text-base-content/50 hover:text-base-content"
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          <% end %>
+        </div>
+
+        <%= case @selected do %>
+          <% {:node, id} -> %>
+            <% node = Map.fetch!(@nodes, id) %>
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="font-data text-sm">{id}</span>
+                <span class={[
+                  "rounded px-2 py-0.5 font-data text-xs",
+                  status_badge_class(node.status)
+                ]}>
+                  {node.status}
+                </span>
+              </div>
+
+              <div>
+                <label for={"latency-input-#{id}"} class="text-xs text-base-content/60">
+                  Latencia inyectada: <span class="font-data">{node.latency_ms}ms</span>
+                </label>
+                <form id={"latency-form-#{id}"} phx-change="set_latency">
+                  <input type="hidden" name="node_id" value={id} />
+                  <input
+                    id={"latency-input-#{id}"}
+                    type="range"
+                    name="value"
+                    min="0"
+                    max="2000"
+                    step="50"
+                    value={node.latency_ms}
+                    class="range range-sm"
+                  />
+                </form>
+              </div>
+
+              <div>
+                <label for={"failure-rate-input-#{id}"} class="text-xs text-base-content/60">
+                  Packet loss: <span class="font-data">{round(node.failure_rate * 100)}%</span>
+                </label>
+                <form id={"failure-rate-form-#{id}"} phx-change="set_failure_rate">
+                  <input type="hidden" name="node_id" value={id} />
+                  <input
+                    id={"failure-rate-input-#{id}"}
+                    type="range"
+                    name="value"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={node.failure_rate}
+                    class="range range-sm"
+                  />
+                </form>
+              </div>
+
+              <%= if node.status == :dead do %>
+                <button phx-click="revive_node" phx-value-id={id} class="btn btn-outline btn-sm">
+                  <.icon name="hero-arrow-path" class="size-4" /> Reiniciar nodo
+                </button>
+              <% else %>
+                <button phx-click="kill_node" phx-value-id={id} class="btn btn-error btn-sm">
+                  <.icon name="hero-bolt" class="size-4" /> Matar proceso
+                </button>
+              <% end %>
+            </div>
+          <% {:edge, from, to} -> %>
+            <div class="flex flex-col gap-3">
+              <p class="font-data text-sm">{from} &rarr; {to}</p>
+              <button
+                phx-click="disconnect_edge"
+                phx-value-from={from}
+                phx-value-to={to}
+                class="btn btn-error btn-sm"
+              >
+                <.icon name="hero-x-mark" class="size-4" /> Eliminar conexión
+              </button>
+            </div>
+          <% nil -> %>
+            <p class="text-sm text-base-content/50">
+              Clic en un nodo o una conexión del canvas. Arrastrá desde un nodo hasta otro para crear una conexión nueva.
+            </p>
+        <% end %>
+      </section>
+    </aside>
+  </div>
+</div>
