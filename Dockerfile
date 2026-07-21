@@ -26,6 +26,7 @@ RUN mix compile
 RUN mix assets.deploy
 
 COPY config/runtime.exs config/
+COPY rel rel
 
 RUN mix release
 
