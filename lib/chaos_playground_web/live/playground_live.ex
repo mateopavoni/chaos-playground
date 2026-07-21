@@ -6,6 +6,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
 
   @metrics_tick_ms 500
   @metrics_window_ms 2_000
+  @history_max 40
 
   @impl true
   def mount(_params, _session, socket) do
@@ -30,6 +31,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
       |> assign(:running?, engine.running?)
       |> assign(:rps, engine.rps)
       |> assign(:metrics, %{rps: 0, p99_ms: 0, error_rate: 0.0})
+      |> assign(:metrics_history, [])
       |> assign(:builtin_presets, Presets.list())
       |> assign(:saved_presets, Topologies.list_saved())
       |> assign(:selected, nil)
@@ -243,7 +245,10 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
     window = Process.get(:metrics_buffer, []) |> Enum.filter(&(now - &1.ts <= @metrics_window_ms))
     Process.put(:metrics_buffer, window)
 
-    {:noreply, assign(socket, :metrics, compute_metrics(window, now))}
+    metrics = compute_metrics(window, now)
+    history = [metrics | socket.assigns.metrics_history] |> Enum.take(@history_max)
+
+    {:noreply, socket |> assign(:metrics, metrics) |> assign(:metrics_history, history)}
   end
 
   defp compute_metrics([], _now), do: %{rps: 0, p99_ms: 0, error_rate: 0.0}
@@ -263,6 +268,21 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
 
   defp percentile([], _p), do: 0
   defp percentile(sorted, p), do: Enum.at(sorted, max(0, round(p * (length(sorted) - 1))))
+
+  defp chart_points(history, key, width, height, max_v \\ nil) do
+    values = history |> Enum.reverse() |> Enum.map(&Map.fetch!(&1, key))
+    n = length(values)
+    scale = max_v || Enum.max([Enum.max(values, fn -> 0 end), 1])
+
+    values
+    |> Enum.with_index()
+    |> Enum.map(fn {v, i} ->
+      x = if n <= 1, do: width, else: i / (n - 1) * width
+      y = height - min(v / scale, 1) * height
+      "#{Float.round(x * 1.0, 1)},#{Float.round(y * 1.0, 1)}"
+    end)
+    |> Enum.join(" ")
+  end
 
   defp atomize_nodes(nodes) do
     Enum.map(nodes, fn n ->
