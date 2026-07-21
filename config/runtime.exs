@@ -76,6 +76,14 @@ if config_env() == :prod do
 
   config :chaos_playground, ChaosPlaygroundWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
+    # PHX_HOST solo puede apuntar a un dominio, pero la app se sirve desde dos
+    # (nip.io + dominio propio) - sin esto, LiveView rechaza el socket del que
+    # no coincida con PHX_HOST y la pagina queda cargando sin conectar nunca.
+    check_origin: [
+      "https://#{host}",
+      "https://chaos-playground.146.181.35.182.nip.io",
+      "https://chaos-playground.mateopavoni.com.ar"
+    ],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
