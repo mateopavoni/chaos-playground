@@ -514,6 +514,12 @@
 
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+      // Element.click() no existe en nodos SVG (el <g> de cada nodo del canvas),
+      // asi que disparamos el MouseEvent a mano para que sirva con botones y con SVG.
+      function fireClick(el) {
+        el?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+      }
+
       function closeOnboarding() {
         modal.classList.add("hidden");
         localStorage.setItem(ONBOARD_KEY, "1");
@@ -558,7 +564,7 @@
         demoBtn.disabled = true;
         demoLabel.textContent = "Corriendo demo…";
 
-        document.querySelector('button[phx-value-name="Monolith vs Microservices"]')?.click();
+        fireClick(document.querySelector('button[phx-value-name="Monolith vs Microservices"]'));
         await wait(600);
 
         const startBtn = document.querySelector('button[phx-click="start_traffic"]');
@@ -570,7 +576,7 @@
           2800,
         );
 
-        document.querySelector('[data-node-id="micro-svc-a"]')?.click();
+        fireClick(document.querySelector('[data-node-id="micro-svc-a"]'));
         await wait(400);
 
         const inspector = document.getElementById("inspector-panel");
@@ -580,7 +586,7 @@
           2200,
         );
 
-        document.querySelector('button[phx-click="kill_node"]')?.click();
+        fireClick(document.querySelector('button[phx-click="kill_node"]'));
 
         await showCallout(
           document.getElementById("metrics-dl"),
