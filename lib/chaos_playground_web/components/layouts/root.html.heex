@@ -52,10 +52,29 @@
     <script>
       (() => {
         const btn = document.getElementById("theme-toggle");
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", (e) => {
           const current = document.documentElement.getAttribute("data-theme");
-          btn.dataset.phxTheme = current === "dark" ? "light" : "dark";
-          btn.dispatchEvent(new CustomEvent("phx:set-theme", { bubbles: true }));
+          const next = current === "dark" ? "light" : "dark";
+          const apply = () => {
+            btn.dataset.phxTheme = next;
+            btn.dispatchEvent(new CustomEvent("phx:set-theme", { bubbles: true }));
+          };
+
+          if (!document.startViewTransition) {
+            apply();
+            return;
+          }
+
+          const { clientX: x, clientY: y } = e;
+          const radius = Math.hypot(
+            Math.max(x, innerWidth - x),
+            Math.max(y, innerHeight - y),
+          );
+          const root = document.documentElement.style;
+          root.setProperty("--theme-toggle-x", `${x}px`);
+          root.setProperty("--theme-toggle-y", `${y}px`);
+          root.setProperty("--theme-toggle-radius", `${radius}px`);
+          document.startViewTransition(apply);
         });
       })();
     </script>
