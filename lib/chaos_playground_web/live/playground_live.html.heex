@@ -459,8 +459,15 @@
   <!-- Callout flotante usado por la demo guiada -->
   <div
     id="demo-callout"
-    class="hidden fixed z-[60] max-w-72 rounded-lg border border-primary/40 bg-base-200 px-3 py-2 text-sm text-base-content shadow-xl"
+    class="hidden fixed z-[60] w-72 rounded-lg border border-primary/40 bg-base-200 px-3 py-2.5 text-sm text-base-content shadow-xl"
   >
+    <div class="mb-1.5 flex items-center justify-between">
+      <span id="demo-callout-step" class="font-data text-[10px] uppercase tracking-wide text-base-content/40"></span>
+      <button id="demo-skip" type="button" class="text-[10px] uppercase tracking-wide text-base-content/40 hover:text-base-content">
+        Saltar demo ✕
+      </button>
+    </div>
+    <p id="demo-callout-text"></p>
   </div>
 
   <!-- Modal de ayuda / manual rapido -->
@@ -548,68 +555,145 @@
         if (e.target === helpModal) helpModal.classList.add("hidden");
       });
 
-      function showCallout(target, text, ms) {
-        if (!target) return wait(ms);
+      const calloutStep = document.getElementById("demo-callout-step");
+      const calloutText = document.getElementById("demo-callout-text");
+      const skipBtn = document.getElementById("demo-skip");
+
+      function positionCallout(target) {
+        if (!target) return;
         const rect = target.getBoundingClientRect();
-        callout.textContent = text;
         const left = Math.min(
           Math.max(12, rect.left + rect.width / 2 - 140),
           window.innerWidth - 300,
         );
         callout.style.top = `${rect.bottom + 10 + window.scrollY}px`;
         callout.style.left = `${left}px`;
+      }
+
+      function showCallout(target, step, total, text) {
+        positionCallout(target);
+        calloutStep.textContent = `Paso ${step}/${total}`;
+        calloutText.textContent = text;
         callout.classList.remove("hidden");
-        return wait(ms).then(() => callout.classList.add("hidden"));
+      }
+
+      function hideCallout() {
+        callout.classList.add("hidden");
       }
 
       let demoRunning = false;
+      let demoCancelled = false;
+
+      // Cada paso explica ANTES de actuar (le da tiempo a leer), despues actua,
+      // y deja el resultado a la vista un rato antes de pasar al siguiente paso.
+      async function runStep({ target, step, total, text, before = 1400, action = null, after = 2600 }) {
+        if (demoCancelled) return;
+        showCallout(target, step, total, text);
+        await wait(before);
+        if (demoCancelled) return;
+        if (action) action();
+        await wait(after);
+      }
 
       async function runGuidedDemo() {
         if (demoRunning) return;
         demoRunning = true;
+        demoCancelled = false;
         demoBtn.disabled = true;
         demoLabel.textContent = "Corriendo demo…";
+        skipBtn.classList.remove("hidden");
 
-        fireClick(document.querySelector('button[phx-value-name="Monolith vs Microservices"]'));
-        await wait(600);
+        const metricsTarget = document.getElementById("metrics-dl");
+        const total = 6;
 
-        const startBtn = document.querySelector('button[phx-click="start_traffic"]');
-        if (startBtn && !startBtn.disabled) startBtn.click();
+        await runStep({
+          target: metricsTarget,
+          step: 1,
+          total,
+          text: "Esta es 'Monolith vs Microservices': dos arquitecturas equivalentes corriendo en paralelo, para comparar cómo se comportan bajo falla.",
+          before: 3200,
+          after: 400,
+        });
 
-        await showCallout(
-          document.getElementById("metrics-dl"),
-          "Arrancamos tráfico simulado — mirá las métricas y las partículas viajando por el canvas",
-          2800,
-        );
+        await runStep({
+          target: metricsTarget,
+          step: 2,
+          total,
+          text: "Primero reiniciamos la topología en limpio: esto mata y vuelve a levantar todos los procesos de nodo.",
+          before: 1200,
+          action: () => fireClick(document.querySelector('button[phx-value-name="Monolith vs Microservices"]')),
+          after: 2200,
+        });
 
-        fireClick(document.querySelector('[data-node-id="micro-svc-a"]'));
-        await wait(400);
+        await runStep({
+          target: metricsTarget,
+          step: 3,
+          total,
+          text: "Ahora arrancamos tráfico simulado. Cada partícula que ves viajar por el canvas es un paquete real recorriendo las conexiones.",
+          before: 1400,
+          action: () => {
+            const startBtn = document.querySelector('button[phx-click="start_traffic"]');
+            if (startBtn && !startBtn.disabled) startBtn.click();
+          },
+          after: 3400,
+        });
+
+        await runStep({
+          target: metricsTarget,
+          step: 4,
+          total,
+          text: "Vamos a elegir uno de los nodos de API para intervenirlo. Un clic abre su Inspector, a la derecha.",
+          before: 1400,
+          action: () => fireClick(document.querySelector('[data-node-id="micro-svc-a"]')),
+          after: 2000,
+        });
 
         const inspector = document.getElementById("inspector-panel");
-        await showCallout(
-          inspector,
-          "Este nodo es un proceso OTP real — lo vamos a matar de verdad",
-          2200,
-        );
 
-        fireClick(document.querySelector('button[phx-click="kill_node"]'));
+        await runStep({
+          target: inspector,
+          step: 5,
+          total,
+          text: "Este nodo es un proceso real de Erlang/OTP, no una animación. Cuando lo matemos, el proceso termina de verdad — como en producción.",
+          before: 2600,
+          action: () => fireClick(document.querySelector('button[phx-click="kill_node"]')),
+          after: 3400,
+        });
 
-        await showCallout(
-          document.getElementById("metrics-dl"),
-          "💥 Proceso terminado. Mirá el ERROR% subir — el tráfico que dependia de este nodo está fallando de verdad",
-          3400,
-        );
+        await runStep({
+          target: metricsTarget,
+          step: 6,
+          total,
+          text: "💥 Proceso terminado. Mirá el ERROR% y el gráfico del header: el tráfico que dependía de este nodo está fallando en serio, no simulado.",
+          before: 0,
+          after: 3600,
+        });
 
-        await showCallout(
-          inspector,
-          "Reiniciálo con este botón cuando quieras, o seguí rompiendo cosas vos mismo 🔧",
-          3600,
-        );
+        if (!demoCancelled) {
+          showCallout(
+            inspector,
+            total,
+            total,
+            "Podés reiniciarlo con el botón del Inspector, o seguir rompiendo cosas vos mismo. Demo terminada 🔧",
+          );
+          await wait(3800);
+        }
 
+        hideCallout();
+        skipBtn.classList.add("hidden");
         demoBtn.disabled = false;
         demoLabel.textContent = "Demo guiada (30s)";
         demoRunning = false;
       }
+
+      skipBtn.addEventListener("click", () => {
+        demoCancelled = true;
+        hideCallout();
+        skipBtn.classList.add("hidden");
+        demoBtn.disabled = false;
+        demoLabel.textContent = "Demo guiada (30s)";
+        demoRunning = false;
+      });
 
       demoBtn.addEventListener("click", runGuidedDemo);
     })();
