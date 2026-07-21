@@ -1,0 +1,15 @@
+_build/
+deps/
+.git/
+.gitignore
+.home/
+cover/
+doc/
+priv/static/assets/
+priv/static/cache_manifest.json
+node_modules/
+assets/node_modules/
+test/
+*.md
+.env
+.dokku/
