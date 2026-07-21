@@ -273,15 +273,25 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
     values = history |> Enum.reverse() |> Enum.map(&Map.fetch!(&1, key))
     n = length(values)
     scale = max_v || Enum.max([Enum.max(values, fn -> 0 end), 1])
+    # padding evita que un valor en el maximo/minimo corte el stroke contra el borde del viewBox
+    pad = height * 0.15
+    inner = height - 2 * pad
 
     values
     |> Enum.with_index()
     |> Enum.map(fn {v, i} ->
       x = if n <= 1, do: width, else: i / (n - 1) * width
-      y = height - min(v / scale, 1) * height
+      y = height - pad - min(v / scale, 1) * inner
       "#{Float.round(x * 1.0, 1)},#{Float.round(y * 1.0, 1)}"
     end)
     |> Enum.join(" ")
+  end
+
+  defp chart_area_points(history, key, width, height, max_v \\ nil) do
+    case chart_points(history, key, width, height, max_v) do
+      "" -> ""
+      line -> "#{line} #{width},#{height} 0,#{height}"
+    end
   end
 
   defp atomize_nodes(nodes) do

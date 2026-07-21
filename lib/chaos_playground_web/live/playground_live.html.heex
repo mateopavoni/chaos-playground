@@ -24,20 +24,26 @@
         class="hidden items-center gap-2 rounded-lg border border-base-300 bg-base-200/40 px-3 py-2 sm:flex"
         title="RPS (naranja) y % de error (rojo) — ultimos 20s"
       >
-        <svg viewBox="0 0 120 36" class="h-9 w-28" preserveAspectRatio="none">
+        <svg viewBox="0 0 160 48" class="h-12 w-40" preserveAspectRatio="none">
+          <polygon
+            points={chart_area_points(@metrics_history, :rps, 160, 48)}
+            class="fill-primary/10"
+          />
           <polyline
-            points={chart_points(@metrics_history, :rps, 120, 36)}
+            points={chart_points(@metrics_history, :rps, 160, 48)}
             fill="none"
             class="stroke-primary"
             stroke-width="2"
             stroke-linejoin="round"
+            stroke-linecap="round"
             vector-effect="non-scaling-stroke"
           />
           <polyline
-            points={chart_points(@metrics_history, :error_rate, 120, 36, 1.0)}
+            points={chart_points(@metrics_history, :error_rate, 160, 48, 1.0)}
             fill="none"
             class="stroke-status-dead"
             stroke-width="1.5"
+            stroke-linecap="round"
             stroke-dasharray="3 2"
             vector-effect="non-scaling-stroke"
           />
