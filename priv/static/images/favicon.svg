@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .bg { fill: #f4f4f5; }
+    .wire { stroke: #d4d4d8; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #16181d; }
+      .wire { stroke: #3a3f4b; }
+    }
+  </style>
+  <rect class="bg" width="32" height="32" rx="7" />
+  <g class="wire" stroke-width="1.6" stroke-linecap="round">
+    <line x1="9" y1="10" x2="23" y2="10" />
+    <line x1="23" y1="10" x2="16" y2="23" />
+    <line x1="9" y1="10" x2="16" y2="23" />
+  </g>
+  <circle cx="9" cy="10" r="4" fill="#fb6b1d" />
+  <circle cx="23" cy="10" r="4" fill="#3ecf8e" />
+  <circle cx="16" cy="23" r="4" fill="#3ecf8e" />
+</svg>

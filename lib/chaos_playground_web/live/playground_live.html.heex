@@ -1,21 +1,23 @@
-<div class="min-h-screen bg-base-100 text-base-content">
+<div class="bg-base-100 text-base-content">
   <.flash kind={:info} flash={@flash} />
   <.flash kind={:error} flash={@flash} />
 
   <header class="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 px-6 py-4">
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
       <div>
         <h1 class="font-display text-xl font-semibold tracking-tight">Chaos Playground</h1>
-        <p class="text-sm text-base-content/60">{@topology.name}</p>
+        <p class="text-sm text-base-content/60">
+          {@topology.name} — Chaos Engineering en vivo: cada nodo es un proceso OTP real
+        </p>
       </div>
       <button
         id="help-open"
         type="button"
         aria-label="Cómo usar esto"
         title="Cómo usar esto"
-        class="btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content"
+        class="btn btn-circle btn-outline btn-sm border-base-300 text-base-content/70 hover:border-primary hover:text-primary"
       >
-        <.icon name="hero-question-mark-circle" class="size-4" />
+        <.icon name="hero-question-mark-circle" class="size-5" />
       </button>
     </div>
 
@@ -212,8 +214,19 @@
             },
 
             animateHop(fromId, toId, durationMs) {
-              const [x1, y1] = this.nodeCenter(fromId);
-              const [x2, y2] = this.nodeCenter(toId);
+              // Recorre solo el tramo entre los bordes de los nodos (radio 26, igual al <circle>
+              // del canvas) y funde in/out en las puntas, asi la particula "entra" y "sale"
+              // del nodo en vez de superponerse encima de su circulo.
+              const NODE_R = 26;
+              const [cx1, cy1] = this.nodeCenter(fromId);
+              const [cx2, cy2] = this.nodeCenter(toId);
+              const dist = Math.hypot(cx2 - cx1, cy2 - cy1) || 1;
+              const ux = (cx2 - cx1) / dist;
+              const uy = (cy2 - cy1) / dist;
+              const x1 = cx1 + ux * NODE_R;
+              const y1 = cy1 + uy * NODE_R;
+              const x2 = cx2 - ux * NODE_R;
+              const y2 = cy2 - uy * NODE_R;
 
               const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
               dot.setAttribute("r", "4");
@@ -223,7 +236,12 @@
               this.particles.appendChild(dot);
 
               const anim = dot.animate(
-                [{ transform: "translate(0px,0px)" }, { transform: `translate(${x2 - x1}px, ${y2 - y1}px)` }],
+                [
+                  { transform: "translate(0px,0px)", opacity: 0 },
+                  { transform: "translate(0px,0px)", opacity: 1, offset: 0.12 },
+                  { transform: `translate(${x2 - x1}px, ${y2 - y1}px)`, opacity: 1, offset: 0.88 },
+                  { transform: `translate(${x2 - x1}px, ${y2 - y1}px)`, opacity: 0 },
+                ],
                 { duration: durationMs, easing: "linear", fill: "forwards" }
               );
               anim.onfinish = () => dot.remove();
@@ -437,7 +455,12 @@
     class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
   >
     <div class="max-w-md rounded-xl border border-base-300 bg-base-100 p-6 shadow-2xl">
-      <h2 class="font-display text-lg font-semibold">👋 Chaos Playground</h2>
+      <h2 class="font-display text-lg font-semibold">Chaos Playground</h2>
+      <p class="mt-2 text-sm text-base-content/70">
+        Un playground de Chaos Engineering: armá una topología de infraestructura (load balancer,
+        API, DB, cache, cola) y sometela a tráfico simulado en tiempo real para ver cómo se
+        comporta bajo falla.
+      </p>
       <p class="mt-2 text-sm text-base-content/70">
         Cada nodo de este canvas es un proceso real de Erlang/OTP (un <code class="font-data text-xs">GenServer</code>).
         Cuando lo "matás" desde acá, el proceso muere de verdad — no es una animación en JS.
@@ -664,7 +687,7 @@
           target: metricsTarget,
           step: 6,
           total,
-          text: "💥 Proceso terminado. Mirá el ERROR% y el gráfico del header: el tráfico que dependía de este nodo está fallando en serio, no simulado.",
+          text: "Proceso terminado. Mirá el ERROR% y el gráfico del header: el tráfico que dependía de este nodo está fallando en serio, no simulado.",
           before: 0,
           after: 3600,
         });
@@ -674,7 +697,7 @@
             inspector,
             total,
             total,
-            "Podés reiniciarlo con el botón del Inspector, o seguir rompiendo cosas vos mismo. Demo terminada 🔧",
+            "Podés reiniciarlo con el botón del Inspector, o seguir rompiendo cosas vos mismo. Demo terminada.",
           );
           await wait(3800);
         }
