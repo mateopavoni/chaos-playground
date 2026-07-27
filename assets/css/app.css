@@ -106,10 +106,6 @@ body {
 }
 
 .theme-toggle {
-  position: fixed;
-  bottom: 1.25rem;
-  right: 1.25rem;
-  z-index: 50;
   display: inline-grid;
   place-items: center;
   width: 2.25rem;
