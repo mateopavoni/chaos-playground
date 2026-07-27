@@ -96,9 +96,9 @@
 @theme {
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-data: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
-  --color-status-healthy: oklch(74% 0.17 165);
-  --color-status-degraded: oklch(80% 0.16 85);
-  --color-status-dead: oklch(63% 0.24 25);
+  --color-status-healthy: oklch(78% 0.1 230);
+  --color-status-degraded: oklch(80% 0.19 80);
+  --color-status-dead: oklch(55% 0.2 25);
 }
 
 body {
@@ -147,6 +147,32 @@ body {
 
 [data-node-id]:hover .node-circle {
   filter: drop-shadow(0 0 12px currentColor);
+}
+
+/* Estado del nodo: color + movimiento, no solo hue — evita el cliché semaforo
+   rojo/amarillo/verde, ilegible para daltonismo. Sano respira lento, degradado
+   pulsa rapido ("esta sufriendo"), muerto queda quieto y con el aro punteado
+   (circuito roto). */
+.node-circle[data-status="healthy"] {
+  animation: node-pulse 3.2s ease-in-out infinite;
+}
+
+.node-circle[data-status="degraded"] {
+  animation: node-pulse 0.9s ease-in-out infinite;
+}
+
+.node-circle[data-status="dead"] {
+  opacity: 0.6;
+  filter: drop-shadow(0 0 2px currentColor);
+}
+
+@keyframes node-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 14px currentColor);
+  }
 }
 
 .theme-toggle-sun,

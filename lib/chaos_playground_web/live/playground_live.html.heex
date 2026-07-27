@@ -132,6 +132,8 @@
                   r="26"
                   stroke-width="2"
                   stroke="currentColor"
+                  stroke-dasharray={node.status == :dead && "6 4"}
+                  data-status={node.status}
                   class={["node-circle", node_fill_class(node.status)]}
                 />
                 <text
