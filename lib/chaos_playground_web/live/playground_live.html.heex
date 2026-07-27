@@ -3,22 +3,22 @@
   <.flash kind={:error} flash={@flash} />
 
   <header class="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 px-6 py-4">
-    <div class="flex items-center gap-3">
-      <div>
-        <h1 class="font-display text-xl font-semibold tracking-tight">Chaos Playground</h1>
+    <div>
+      <h1 class="font-display text-xl font-semibold tracking-tight">Chaos Playground</h1>
+      <div class="flex items-center gap-1.5">
         <p class="text-sm text-base-content/60">
           {@topology.name} — Chaos Engineering en vivo: cada nodo es un proceso OTP real
         </p>
+        <button
+          id="help-open"
+          type="button"
+          aria-label="Cómo usar esto"
+          title="Cómo usar esto"
+          class="text-base-content/40 hover:text-primary"
+        >
+          <.icon name="hero-question-mark-circle" class="size-4" />
+        </button>
       </div>
-      <button
-        id="help-open"
-        type="button"
-        aria-label="Cómo usar esto"
-        title="Cómo usar esto"
-        class="btn btn-circle btn-outline btn-sm border-base-300 text-base-content/70 hover:border-primary hover:text-primary"
-      >
-        <.icon name="hero-question-mark-circle" class="size-5" />
-      </button>
     </div>
 
     <div class="flex items-center gap-4">
