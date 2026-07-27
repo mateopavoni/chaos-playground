@@ -1,4 +1,4 @@
-<div class="bg-base-100 text-base-content">
+<div class="flex min-h-screen flex-col bg-base-100 text-base-content">
   <.flash kind={:info} flash={@flash} />
   <.flash kind={:error} flash={@flash} />
 
@@ -82,9 +82,9 @@
     </div>
   </header>
 
-  <div class="flex flex-col gap-4 p-4 lg:flex-row lg:items-start">
+  <div class="flex min-h-0 flex-1 flex-col gap-4 p-4 lg:flex-row">
     <div class="flex-1 overflow-hidden rounded-lg border border-base-300 bg-base-200/40 canvas-grid">
-      <div id="network-canvas" phx-hook=".NetworkCanvas" class="aspect-[2/1] w-full">
+      <div id="network-canvas" phx-hook=".NetworkCanvas" class="aspect-[2/1] w-full lg:aspect-auto lg:h-full">
         <svg viewBox="-30 -30 1010 460" class="h-full w-full">
           <g>
             <%= for {from_id, node} <- @nodes, to_id <- node.connections do %>
@@ -261,7 +261,7 @@
       </div>
     </div>
 
-    <aside class="flex w-full flex-col gap-4 lg:w-80">
+    <aside class="flex w-full flex-col gap-4 overflow-y-auto lg:h-full lg:w-80">
       <section class="rounded-lg border border-base-300 bg-base-200/40 p-4">
         <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-base-content/60">
           Tráfico
