@@ -335,18 +335,21 @@
           </div>
         <% end %>
 
-        <form phx-submit="save_topology" class="mt-3 flex gap-2 border-t border-base-300 pt-3">
-          <input
-            type="text"
-            name="name"
-            placeholder="Nombre del preset"
-            required
-            class="input input-sm flex-1"
-          />
-          <button type="submit" class="btn btn-primary btn-sm">
-            <.icon name="hero-bookmark" class="size-4" />
-          </button>
-        </form>
+        <div class="mt-3 border-t border-base-300 pt-3">
+          <p class="mb-2 text-xs text-base-content/50">Guardá la topología actual como preset nuevo</p>
+          <form phx-submit="save_topology" class="flex gap-2">
+            <input
+              type="text"
+              name="name"
+              placeholder="Nombre del preset"
+              required
+              class="input input-sm flex-1"
+            />
+            <button type="submit" class="btn btn-primary btn-sm">
+              <.icon name="hero-bookmark" class="size-4" />
+            </button>
+          </form>
+        </div>
       </section>
 
       <section id="inspector-panel" class="rounded-lg border border-base-300 bg-base-200/40 p-4">
