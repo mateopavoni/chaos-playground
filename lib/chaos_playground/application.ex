@@ -12,6 +12,7 @@ defmodule ChaosPlayground.Application do
       ChaosPlayground.Repo,
       {DNSCluster, query: Application.get_env(:chaos_playground, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ChaosPlayground.PubSub},
+      ChaosPlayground.RateLimit,
       ChaosPlayground.Engine.NodeRegistry,
       ChaosPlayground.Engine.NodeSupervisor,
       ChaosPlayground.Engine.TrafficSimulator,

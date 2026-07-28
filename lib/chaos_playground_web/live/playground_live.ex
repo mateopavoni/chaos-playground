@@ -33,7 +33,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
       |> assign(:metrics, %{rps: 0, p99_ms: 0, error_rate: 0.0})
       |> assign(:metrics_history, [])
       |> assign(:builtin_presets, Presets.list())
-      |> assign(:saved_presets, Topologies.list_saved())
+      |> assign(:saved_presets, list_saved_presets(socket.assigns.current_scope))
       |> assign(:selected, nil)
 
     {:ok, socket}
@@ -100,47 +100,41 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   end
 
   def handle_event("load_saved", %{"id" => id}, socket) do
-    saved = Topologies.get!(id)
+    case socket.assigns.current_scope do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Iniciá sesión para cargar tus presets guardados")}
 
-    topology = %{
-      name: saved.name,
-      entry_node: saved.entry_node,
-      nodes: atomize_nodes(saved.nodes),
-      connections: saved.connections
-    }
+      scope ->
+        case Topologies.get(scope, id) do
+          {:ok, saved} ->
+            topology = %{
+              name: saved.name,
+              entry_node: saved.entry_node,
+              nodes: atomize_nodes(saved.nodes),
+              connections: saved.connections
+            }
 
-    Topology.apply!(topology)
-    {:noreply, socket}
+            Topology.apply!(topology)
+            {:noreply, socket}
+
+          {:error, :not_found} ->
+            {:noreply, put_flash(socket, :error, "Preset no encontrado")}
+        end
+    end
   end
 
   def handle_event("save_topology", %{"name" => name}, socket) do
-    nodes =
-      Enum.map(socket.assigns.topology.nodes, fn n ->
-        %{"id" => n.id, "type" => Atom.to_string(n.type), "x" => n.x, "y" => n.y}
-      end)
+    case socket.assigns.current_scope do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Iniciá sesión para guardar presets")}
 
-    connections =
-      for {id, %{connections: conns}} <- socket.assigns.nodes, to <- conns, do: [id, to]
-
-    attrs = %{
-      name: name,
-      entry_node: socket.assigns.entry_node,
-      nodes: nodes,
-      connections: connections
-    }
-
-    case Topologies.save(attrs) do
-      {:ok, _saved} ->
-        socket =
-          socket
-          |> assign(:saved_presets, Topologies.list_saved())
-          |> put_flash(:info, "Preset \"#{name}\" guardado")
-
-        {:noreply, socket}
-
-      {:error, changeset} ->
-        {:noreply,
-         put_flash(socket, :error, "No se pudo guardar: #{changeset_summary(changeset)}")}
+      scope ->
+        if under_save_rate_limit?(scope) do
+          do_save_topology(socket, scope, name)
+        else
+          {:noreply,
+           put_flash(socket, :error, "Estás guardando muy seguido, esperá un momento")}
+        end
     end
   end
 
@@ -305,6 +299,47 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
     |> Ecto.Changeset.traverse_errors(fn {msg, _opts} -> msg end)
     |> Enum.map_join(", ", fn {field, msgs} -> "#{field} #{Enum.join(msgs, ", ")}" end)
   end
+
+  defp do_save_topology(socket, scope, name) do
+    nodes =
+      Enum.map(socket.assigns.topology.nodes, fn n ->
+        %{"id" => n.id, "type" => Atom.to_string(n.type), "x" => n.x, "y" => n.y}
+      end)
+
+    connections =
+      for {id, %{connections: conns}} <- socket.assigns.nodes, to <- conns, do: [id, to]
+
+    attrs = %{
+      name: name,
+      entry_node: socket.assigns.entry_node,
+      nodes: nodes,
+      connections: connections
+    }
+
+    case Topologies.save(scope, attrs) do
+      {:ok, _saved} ->
+        socket =
+          socket
+          |> assign(:saved_presets, Topologies.list_saved(scope))
+          |> put_flash(:info, "Preset \"#{name}\" guardado")
+
+        {:noreply, socket}
+
+      {:error, changeset} ->
+        {:noreply,
+         put_flash(socket, :error, "No se pudo guardar: #{changeset_summary(changeset)}")}
+    end
+  end
+
+  defp under_save_rate_limit?(scope) do
+    match?(
+      {:allow, _},
+      ChaosPlayground.RateLimit.hit("save_topology:user:#{scope.user.id}", :timer.minutes(1), 10)
+    )
+  end
+
+  defp list_saved_presets(nil), do: []
+  defp list_saved_presets(scope), do: Topologies.list_saved(scope)
 
   # Helpers de template
 
