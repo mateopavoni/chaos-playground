@@ -65,14 +65,25 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
 
   defp packets_per_tick(rps), do: round(rps * (@tick_ms / 1000))
 
+  defp spawn_packets(_entry_node, 0), do: :ok
+
   defp spawn_packets(entry_node, count) do
-    Enum.each(1..count, fn _ ->
+    # ponytail: separa el arranque de cada paquete a lo largo de la ventana del tick
+    # (en vez de lanzarlos todos en el mismo instante) para que dos paquetes en el
+    # mismo camino no queden perfectamente superpuestos en el canvas — a RPS alto se
+    # ven muchos mas puntos en vez de un solo punto "grueso".
+    Enum.each(0..(count - 1), fn i ->
       packet = %{
         id: System.unique_integer([:positive, :monotonic]),
         started_at: System.monotonic_time(:millisecond)
       }
 
-      Task.start(fn -> route_packet(packet, entry_node) end)
+      delay = div(i * @tick_ms, count)
+
+      Task.start(fn ->
+        if delay > 0, do: Process.sleep(delay)
+        route_packet(packet, entry_node)
+      end)
     end)
   end
 
