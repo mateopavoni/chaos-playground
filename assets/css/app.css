@@ -98,7 +98,7 @@
   --font-data: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
   --color-status-healthy: oklch(62% 0.19 250);
   --color-status-degraded: oklch(80% 0.19 80);
-  --color-status-dead: oklch(55% 0.2 25);
+  --color-status-dead: oklch(50% 0.22 15);
 }
 
 body {
