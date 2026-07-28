@@ -96,15 +96,9 @@
 @theme {
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-data: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
-  --color-status-healthy: oklch(70% 0.19 45);
+  --color-status-healthy: oklch(62% 0.19 250);
   --color-status-degraded: oklch(80% 0.19 80);
   --color-status-dead: oklch(55% 0.2 25);
-}
-
-/* "Sano" toma el acento de marca de cada tema (naranja en dark, azul en
-   light) — un nodo sano se funde con la UI, solo lo que falla resalta. */
-html[data-theme="light"] {
-  --color-status-healthy: oklch(58% 0.19 250);
 }
 
 body {
