@@ -469,7 +469,7 @@
     id="onboarding-modal"
     class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
   >
-    <div class="max-w-md rounded-xl border border-base-300 bg-base-100 p-6 shadow-2xl">
+    <div class="max-h-[85vh] max-w-md overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-6 shadow-2xl">
       <h2 class="font-display text-lg font-semibold">Chaos Playground</h2>
       <p class="mt-2 text-sm text-base-content/70">
         Un playground de Chaos Engineering: armá una topología de infraestructura (load balancer,
@@ -497,7 +497,7 @@
   <!-- Callout flotante usado por la demo guiada -->
   <div
     id="demo-callout"
-    class="hidden fixed z-[60] w-72 rounded-lg border border-primary/40 bg-base-200 px-3 py-2.5 text-sm text-base-content shadow-xl"
+    class="hidden fixed z-[60] w-[calc(100vw-24px)] max-w-72 rounded-lg border border-primary/40 bg-base-200 px-3 py-2.5 text-sm text-base-content shadow-xl"
   >
     <div class="mb-1.5 flex items-center justify-between">
       <span id="demo-callout-step" class="font-data text-[10px] uppercase tracking-wide text-base-content/40"></span>
@@ -571,9 +571,10 @@
         el?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
       }
 
-      // El <select> de entrada de trafico usa phx-change, que LiveView escucha
-      // sobre el evento "change" nativo del form — no alcanza con asignar .value.
-      function fireSelect(el, value) {
+      // El <select> de entrada de trafico y el <input type="range"> de RPS usan
+      // phx-change, que LiveView escucha sobre el evento "change" nativo —
+      // no alcanza con asignar .value.
+      function fireChange(el, value) {
         if (!el) return;
         el.value = value;
         el.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
@@ -605,27 +606,50 @@
       const calloutText = document.getElementById("demo-callout-text");
       const skipBtn = document.getElementById("demo-skip");
 
+      // callout es position:fixed -> las coordenadas son relativas al viewport,
+      // no hace falta (ni corresponde) sumar window.scrollY. Ancho/alto se miden
+      // ya visible (con el texto del paso puesto) porque w-[calc(100vw-24px)]
+      // hace que el tamaño real dependa del viewport y del contenido.
       function positionCallout(target) {
         if (!target) return;
+        const margin = 12;
         const rect = target.getBoundingClientRect();
+        const calloutW = callout.offsetWidth;
+        const calloutH = callout.offsetHeight;
+
         const left = Math.min(
-          Math.max(12, rect.left + rect.width / 2 - 140),
-          window.innerWidth - 300,
+          Math.max(margin, rect.left + rect.width / 2 - calloutW / 2),
+          window.innerWidth - calloutW - margin,
         );
-        callout.style.top = `${rect.bottom + 10 + window.scrollY}px`;
+
+        let top = rect.bottom + 10;
+        if (top + calloutH > window.innerHeight - margin) {
+          top = rect.top - 10 - calloutH; // no entra abajo -> lo mostramos arriba
+        }
+        top = Math.max(margin, Math.min(top, window.innerHeight - calloutH - margin));
+
         callout.style.left = `${left}px`;
+        callout.style.top = `${top}px`;
       }
 
+      let calloutTarget = null;
+
       function showCallout(target, step, total, text) {
-        positionCallout(target);
+        calloutTarget = target;
         calloutStep.textContent = `Paso ${step}/${total}`;
         calloutText.textContent = text;
         callout.classList.remove("hidden");
+        positionCallout(target);
       }
 
       function hideCallout() {
         callout.classList.add("hidden");
+        calloutTarget = null;
       }
+
+      window.addEventListener("resize", () => {
+        if (calloutTarget) positionCallout(calloutTarget);
+      });
 
       let demoRunning = false;
       let demoCancelled = false;
@@ -722,7 +746,7 @@
           total,
           text: "Probemos lo mismo en microservicios: cambiamos la entrada de tráfico a su load balancer, con 3 instancias de API corriendo en paralelo.",
           before: 1400,
-          action: () => fireSelect(document.getElementById("entry-node-select"), "micro-lb"),
+          action: () => fireChange(document.getElementById("entry-node-select"), "micro-lb"),
           after: 3000,
         });
 
@@ -756,11 +780,29 @@
         });
 
         if (!demoCancelled) {
+          // Deja todo como estaba antes de la demo: nodos revividos, trafico
+          // pausado, RPS y entrada de trafico en su valor por defecto — para
+          // que quien mire despues no se encuentre el canvas roto.
+          fireClick(document.querySelector('[data-node-id="monolith-app"]'));
+          await wait(300);
+          fireClick(document.querySelector('button[phx-click="revive_node"]'));
+          await wait(400);
+          fireClick(document.querySelector('[data-node-id="micro-svc-a"]'));
+          await wait(300);
+          fireClick(document.querySelector('button[phx-click="revive_node"]'));
+          await wait(400);
+
+          const pauseBtn = document.querySelector('button[phx-click="pause_traffic"]');
+          if (pauseBtn && !pauseBtn.disabled) pauseBtn.click();
+          fireChange(document.getElementById("entry-node-select"), "monolith-lb");
+          fireChange(document.getElementById("rps-input"), "5");
+          fireClick(document.querySelector('button[phx-click="clear_selection"]'));
+
           showCallout(
-            inspector,
+            document.getElementById("guided-demo-btn"),
             total,
             total,
-            "Podés reiniciar los nodos caídos con el botón del Inspector de cada uno, o seguir rompiendo cosas vos mismo. Demo terminada.",
+            "Repusimos los nodos y volvimos todo a como estaba. Ahora te toca a vos: seguí rompiendo cosas.",
           );
           await wait(3800);
         }
