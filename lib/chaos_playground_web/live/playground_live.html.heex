@@ -284,7 +284,7 @@
 
         <button id="guided-demo-btn" type="button" class="btn btn-sm btn-outline btn-primary mt-2 w-full">
           <.icon name="hero-play-circle" class="size-4" />
-          <span id="guided-demo-label">Demo guiada (30s)</span>
+          <span id="guided-demo-label">Demo guiada (45s)</span>
         </button>
 
         <label for="rps-input" class="mt-3 block text-xs text-base-content/60">
@@ -481,7 +481,7 @@
         Cuando lo "matás" desde acá, el proceso muere de verdad — no es una animación en JS.
       </p>
       <p class="mt-2 text-sm text-base-content/70">
-        Podés ver una demo automática de 30 segundos, o directamente explorar por tu cuenta.
+        Podés ver una demo automática de 45 segundos, o directamente explorar por tu cuenta.
       </p>
       <div class="mt-5 flex flex-col gap-2 sm:flex-row">
         <button id="onboarding-start-demo" type="button" class="btn btn-primary btn-sm flex-1">
@@ -571,6 +571,14 @@
         el?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
       }
 
+      // El <select> de entrada de trafico usa phx-change, que LiveView escucha
+      // sobre el evento "change" nativo del form — no alcanza con asignar .value.
+      function fireSelect(el, value) {
+        if (!el) return;
+        el.value = value;
+        el.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      }
+
       function closeOnboarding() {
         modal.classList.add("hidden");
         localStorage.setItem(ONBOARD_KEY, "1");
@@ -642,13 +650,14 @@
         skipBtn.classList.remove("hidden");
 
         const metricsTarget = document.getElementById("metrics-dl");
-        const total = 6;
+        const inspector = document.getElementById("inspector-panel");
+        const total = 10;
 
         await runStep({
           target: metricsTarget,
           step: 1,
           total,
-          text: "Esta es 'Monolith vs Microservices': dos arquitecturas equivalentes corriendo en paralelo, para comparar cómo se comportan bajo falla.",
+          text: "Esta es 'Monolith vs Microservices': dos arquitecturas equivalentes corriendo en paralelo. Vamos a romper cada una y comparar cómo aguantan.",
           before: 3200,
           after: 400,
         });
@@ -667,7 +676,7 @@
           target: metricsTarget,
           step: 3,
           total,
-          text: "Ahora arrancamos tráfico simulado. Cada partícula que ves viajar por el canvas es un paquete real recorriendo las conexiones.",
+          text: "Arrancamos tráfico simulado, entrando por el load balancer del monolito. Cada partícula es un paquete real recorriendo las conexiones.",
           before: 1400,
           action: () => {
             const startBtn = document.querySelector('button[phx-click="start_traffic"]');
@@ -680,19 +689,17 @@
           target: metricsTarget,
           step: 4,
           total,
-          text: "Vamos a elegir uno de los nodos de API para intervenirlo. Un clic abre su Inspector, a la derecha.",
+          text: "Vamos a elegir el nodo de API del monolito para intervenirlo. Un clic abre su Inspector, a la derecha.",
           before: 1400,
-          action: () => fireClick(document.querySelector('[data-node-id="micro-svc-a"]')),
+          action: () => fireClick(document.querySelector('[data-node-id="monolith-app"]')),
           after: 2000,
         });
-
-        const inspector = document.getElementById("inspector-panel");
 
         await runStep({
           target: inspector,
           step: 5,
           total,
-          text: "Este nodo es un proceso real de Erlang/OTP, no una animación. Cuando lo matemos, el proceso termina de verdad — como en producción.",
+          text: "Es un proceso real de Erlang/OTP. Cuando lo matemos, termina de verdad — y como es un Single Point of Failure, se lleva puesto todo lo que depende de él.",
           before: 2600,
           action: () => fireClick(document.querySelector('button[phx-click="kill_node"]')),
           after: 3400,
@@ -702,7 +709,48 @@
           target: metricsTarget,
           step: 6,
           total,
-          text: "Proceso terminado. Mirá el ERROR% y el gráfico del header: el tráfico que dependía de este nodo está fallando en serio, no simulado.",
+          text: "Proceso terminado. Mirá el ERROR%: sin ese único camino, todo el tráfico del monolito falla — no es una animación, es tráfico real sin adónde ir.",
+          before: 0,
+          after: 3200,
+        });
+
+        const entryForm = document.getElementById("entry-node-form");
+
+        await runStep({
+          target: entryForm,
+          step: 7,
+          total,
+          text: "Probemos lo mismo en microservicios: cambiamos la entrada de tráfico a su load balancer, con 3 instancias de API corriendo en paralelo.",
+          before: 1400,
+          action: () => fireSelect(document.getElementById("entry-node-select"), "micro-lb"),
+          after: 3000,
+        });
+
+        await runStep({
+          target: metricsTarget,
+          step: 8,
+          total,
+          text: "Vamos a matar una de las tres réplicas de API, micro-svc-a — exactamente lo mismo que le hicimos al monolito.",
+          before: 1400,
+          action: () => fireClick(document.querySelector('[data-node-id="micro-svc-a"]')),
+          after: 2000,
+        });
+
+        await runStep({
+          target: inspector,
+          step: 9,
+          total,
+          text: "Mismo proceso real, mismo botón. A diferencia del monolito, acá no hay un solo punto de falla.",
+          before: 2600,
+          action: () => fireClick(document.querySelector('button[phx-click="kill_node"]')),
+          after: 3400,
+        });
+
+        await runStep({
+          target: metricsTarget,
+          step: 10,
+          total,
+          text: "Mirá el ERROR%: apenas se nota. Las otras dos instancias absorbieron el tráfico sin drama — esa es la diferencia entre un SPOF y una arquitectura redundante.",
           before: 0,
           after: 3600,
         });
@@ -712,7 +760,7 @@
             inspector,
             total,
             total,
-            "Podés reiniciarlo con el botón del Inspector, o seguir rompiendo cosas vos mismo. Demo terminada.",
+            "Podés reiniciar los nodos caídos con el botón del Inspector de cada uno, o seguir rompiendo cosas vos mismo. Demo terminada.",
           );
           await wait(3800);
         }
@@ -720,7 +768,7 @@
         hideCallout();
         skipBtn.classList.add("hidden");
         demoBtn.disabled = false;
-        demoLabel.textContent = "Demo guiada (30s)";
+        demoLabel.textContent = "Demo guiada (45s)";
         demoRunning = false;
       }
 
@@ -729,7 +777,7 @@
         hideCallout();
         skipBtn.classList.add("hidden");
         demoBtn.disabled = false;
-        demoLabel.textContent = "Demo guiada (30s)";
+        demoLabel.textContent = "Demo guiada (45s)";
         demoRunning = false;
       });
 
