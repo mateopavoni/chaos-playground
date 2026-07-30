@@ -1,79 +1,68 @@
-<div align="center">
-  <h1>Chaos Playground</h1>
-  <p>Armá una topología de infraestructura y sometela a tráfico y fallas reales, en vivo.</p>
-  <p>
-    <a href="https://chaos-playground.mateopavoni.com.ar"><img alt="demo" src="https://img.shields.io/badge/demo-live-brightgreen"></a>
-    <img alt="stack" src="https://img.shields.io/badge/stack-Elixir%20%C2%B7%20Phoenix%20LiveView%20%C2%B7%20PostgreSQL-2b2b2b">
-    <img alt="license" src="https://img.shields.io/badge/license-proprietary-red">
-  </p>
-  <p>
-    <strong><a href="https://chaos-playground.mateopavoni.com.ar">🔗 Probar en vivo</a></strong>
-    — sin cuenta, sin instalar nada. Al entrar hay una demo guiada de 30s.
-  </p>
-</div>
+# Chaos Playground
 
-## El problema
+**Un canvas de infraestructura donde cada nodo es un proceso Erlang/OTP real** — matar un nodo desde
+la UI termina su `GenServer` de verdad, no una animación en JS.
+
+[![demo](https://img.shields.io/badge/demo-live-brightgreen)](https://chaos-playground.mateopavoni.com.ar/)
+![stack](https://img.shields.io/badge/stack-Elixir%20%C2%B7%20Phoenix%20LiveView%20%C2%B7%20PostgreSQL-2b2b2b)
+![license](https://img.shields.io/badge/license-proprietary-red)
+
+Stack: Elixir + Phoenix LiveView + PostgreSQL + Tailwind, un solo servicio, deployado con **Dokku**.
+
+**Demo:** [`chaos-playground.mateopavoni.com.ar`](https://chaos-playground.mateopavoni.com.ar/) — sin
+cuenta, sin instalar nada. Al entrar hay una demo guiada de 30s (botón en el panel de Tráfico) que
+arma una topología, genera tráfico y mata un nodo en vivo, sola. Login opcional solo para guardar
+tus propias topologías; el canvas y el chaos engineering no lo piden.
+
+### Capturas
+_Pendiente — capturar el canvas con tráfico corriendo y el Inspector abierto antes de la próxima
+versión del portfolio._
+
+---
+
+## ¿Qué resuelve?
 Los diagramas de arquitectura y las demos de chaos engineering casi siempre son estáticos o
-simulados en el cliente. Acá cada nodo del canvas — load balancer, API server, DB, cache, queue —
-es un proceso Erlang/OTP real corriendo en el servidor. Matar un nodo desde la UI termina su
-proceso de verdad; la supervisión que lo revive (o no) es la de OTP, no una animación.
+simulados del lado del cliente: una animación CSS de "paquete viajando" o un mock de "nodo caído"
+que solo cambia un ícono. Acá no:
 
-## Stack
-| Tecnología | Por qué |
-|---|---|
-| Elixir + Phoenix LiveView | UI en tiempo real sin SPA aparte; el estado vive del lado del servidor, cerca de los procesos que representa |
-| Erlang/OTP (GenServer, DynamicSupervisor, Registry) | modelo de dominio: cada nodo de red es un proceso supervisado, direccionable por id |
-| PostgreSQL + Ecto | persistencia de presets de arquitectura guardados por usuario |
-| Tailwind + JS Hook (Canvas/SVG) | panel de control server-driven + animación de partículas de paquetes, que sí necesita JS |
+1. **Cada nodo del canvas es un proceso real, supervisado.** Load balancer, API server, DB, cache,
+   queue — cada uno es un `GenServer` bajo un `DynamicSupervisor`, direccionable por id vía
+   `Registry`. "Matar proceso" en la UI es literalmente `Process.exit(pid, :kill)` sobre ese proceso.
+2. **La supervisión es la de OTP, no un mock.** Los hijos del supervisor son `restart: :temporary`
+   a propósito: un nodo matado se queda muerto hasta que algo pide levantarlo nuevamente — la demo
+   *muestra* el estado roto (para enseñar chaos engineering) en vez de un auto-heal invisible que lo
+   tape.
+3. **El canvas es un engine global, compartido por todos los visitantes en simultáneo** (no una
+   sesión por pestaña) — un trade-off explícito, ver Limitaciones.
 
 ## Features
-- Canvas interactivo de nodos y conexiones, con paquetes animados viajando entre ellos (se achican
-  solos si el tramo se satura, para que no se vean pegados a RPS alto).
-- Motor de tráfico configurable: RPS, latencia por nodo, tasa de fallas, packet loss.
-- Chaos actions por nodo/cable: matar proceso, inyectar latencia, dropear paquetes.
+- Canvas interactivo de nodos y conexiones (drag-to-connect), con paquetes animados viajando entre
+  ellos — se achican solos (escala logarítmica) si el tramo se satura, para que no se vean pegados
+  a RPS alto.
+- Motor de tráfico configurable: RPS objetivo, latencia por nodo, tasa de fallas, packet loss.
+- Chaos actions por nodo/cable desde un panel Inspector: matar proceso, inyectar latencia, dropear
+  paquetes, eliminar una conexión.
 - **Chaos Monkey**: toggle que mata un nodo vivo al azar cada 6s, sin intervención — chaos
   engineering en piloto automático.
 - Dashboard en vivo: RPS global, latencia p99, tasa de error, con gráfico de las últimas 20s.
 - Contador de visitantes conectados al canvas compartido (`Phoenix.Presence`).
 - Presets de arquitectura pre-armados (con link directo por `?preset=`) y guardado de topologías
-  propias, con cuenta opcional (login sin email, sin fricción de mailer).
-- Demo guiada de 30s (botón en el panel de Tráfico) para probar el proyecto sin leer nada — resetea
-  el canvas a un estado limpio antes de arrancar, sin importar qué había activado antes.
+  propias en Postgres, con cuenta opcional.
+- Demo guiada de 30s que resetea el canvas a un estado limpio antes de arrancar, sin importar qué
+  había activado antes (Chaos Monkey, tráfico corriendo, nodos muertos de otra sesión).
 
-## Cómo correr
-```bash
-docker compose up
-```
-App en http://localhost:4000. Toolchain 100% en Docker (el host no necesita Elixir instalado).
-Detalle completo — tests, release, deploy — en [RUN.md](RUN.md).
+### En números
+| | |
+|---|---|
+| Tests | **101**, `mix test` corriendo en CI/CD contra cada push a `main` |
+| Rutas | **7** (canvas + registro/login/settings, sin API JSON aparte — todo LiveView) |
+| Motor de tráfico | tick cada **200ms**, un `Task` concurrente por paquete en vuelo |
+| Chaos Monkey | tick cada **6s** |
+| Lighthouse (demo en vivo) | **97** performance / **89** accesibilidad / **96** best practices — ver [Performance](#performance) |
 
-## Demo
-**En vivo:** https://chaos-playground.mateopavoni.com.ar — sin cuenta, sin instalar nada.
-Al entrar por primera vez aparece un modal con la opción de correr una demo automática de 30s.
+---
 
-Deployado con [Dokku](https://dokku.com/) (Dockerfile de producción en la raíz del repo,
-`mix release` + Postgres vía plugin de dokku, TLS con Let's Encrypt).
-
-## Manual de usuario
-
-1. **Elegí un preset** ("Monolith vs Microservices" o "Primary/Replica DB + Load Balancer") o armá el
-   tuyo arrastrando desde un nodo hasta otro para conectarlos.
-2. **Tocá "Iniciar"** y subí el slider de RPS objetivo — vas a ver partículas viajando por las
-   conexiones y las métricas del header moverse en tiempo real.
-3. **Clic en un nodo** para abrir el Inspector: ahí lo matás de verdad ("Matar proceso"), le inyectás
-   latencia o packet loss artificial, o lo reiniciás si ya está muerto (un nodo matado se queda
-   muerto hasta que lo revivís a mano, a propósito — ver Limitaciones).
-4. **Clic en una conexión** para seleccionarla y eliminarla.
-5. **Mirá el gráfico del header** (naranja = RPS, rojo punteado = % de error, últimos 20s) — subir el
-   failure_rate o matar un nodo con tráfico dependiente tiene que mover esas líneas. Si no se mueven,
-   algo dejó de funcionar.
-
-El botón `?` junto al título abre esta misma guía dentro de la app. El botón "Demo guiada (30s)" del
-panel de Tráfico corre este recorrido solo, en cualquier momento, y arranca siempre desde cero.
-
-<!-- docs/screenshots/demo.png — capturar el canvas con tráfico corriendo antes de publicar -->
-
-## Architecture
+## Arquitectura (resumen)
 ```mermaid
 graph TD
   App[Application Supervisor]
@@ -92,17 +81,60 @@ graph TD
   Monkey -. mata un nodo vivo al azar .-> Node
   Live <-. broadcast/subscribe .-> PubSub
 ```
-Un nodo = un proceso real, no una fila en memoria — "Matar proceso" llama
-`Process.exit(pid, :kill)` sobre el `NodeServer` de verdad. Detalle completo y las decisiones
-detrás de cada pieza en [ARCHITECTURE.md](ARCHITECTURE.md).
+Detalle completo y las decisiones detrás de cada pieza (por qué `restart: :temporary`, por qué el
+engine es global y no por sesión, por qué el context menu se resolvió con click + Inspector) en
+[ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+## Cómo correr
+```bash
+docker compose up
+```
+App en http://localhost:4000. Toolchain 100% en Docker (imagen `elixir:1.17` + Postgres 16; el host
+no necesita Elixir instalado). Detalle completo — release de producción, deploy a Dokku — en
+[RUN.md](RUN.md).
+
+## La demo guiada
+El botón "Demo guiada (30s)" del panel de Tráfico no es un video ni un script grabado: dispara los
+mismos eventos de LiveView que un usuario haría a mano (cargar preset, subir RPS, abrir el Inspector,
+matar un nodo, cambiar la entrada de tráfico) contra el engine real, con callouts que explican cada
+paso. Primer paso siempre: apaga el Chaos Monkey si estaba prendido y recarga una topología limpia,
+así el recorrido es reproducible sin importar qué había antes en el canvas compartido.
+
+## Tests
+```bash
+docker compose run --rm app mix test
+```
+101 tests: procesos/concurrencia del motor OTP (estado, kill + cleanup de `Registry`, routing con
+`Task`, pausa/resume), LiveView (`Phoenix.LiveViewTest`: mount, start/pause, kill de nodo, cambio de
+preset), auth y rate limiting. `async: false` a propósito — el engine es un singleton global, no hay
+aislamiento por test. 2 tests son flaky por ese mismo motivo (documentado en `.claude/CLAUDE.md`).
 
 ## Performance
 ```bash
 npx lighthouse https://chaos-playground.mateopavoni.com.ar --only-categories=performance,accessibility,best-practices,seo
 ```
-Sin números fijados acá a propósito — el canvas es un engine compartido en vivo (Chaos Monkey puede
-estar corriendo mientras se audita), así que el resultado varía según qué está pasando en el server
-en ese momento. Correlo vos mismo para ver el estado actual.
+Medido en vivo contra la demo pública (2026-07-30):
+
+| Categoría | Score |
+|---|---|
+| Performance | 97 |
+| Accessibility | 89 |
+| Best Practices | 96 |
+| SEO | 82 |
+
+| Métrica | Valor |
+|---|---|
+| First Contentful Paint | 1.7s |
+| Largest Contentful Paint | 2.5s |
+| Total Blocking Time | 60ms |
+| Cumulative Layout Shift | 0 |
+| Speed Index | 2.6s |
+
+El canvas es un engine compartido en vivo (Chaos Monkey puede estar corriendo mientras se audita),
+así que el resultado puede variar corrida a corrida según qué esté pasando en el server en ese
+momento — no es un entorno de benchmark aislado.
 
 ## Limitaciones conocidas
 - **El canvas es un único engine global, compartido por todos los visitantes** — no hay aislamiento
@@ -114,11 +146,12 @@ en ese momento. Correlo vos mismo para ver el estado actual.
 - **Un nodo matado no revive solo.** `restart: :temporary` en el `DynamicSupervisor` es intencional
   — la demo muestra el estado roto en vez de taparlo con auto-heal invisible. "Reiniciar nodo" es
   siempre una acción manual.
-- **2 tests flaky documentados**, mismo origen (el motor OTP es global, no aislado entre tests):
-  uno de carga de presets y uno de pausa de tráfico. Ver `.claude/CLAUDE.md` para el detalle.
+- **2 tests flaky documentados**, mismo origen (el motor OTP es global, no aislado entre tests): uno
+  de carga de presets y uno de pausa de tráfico.
 
 ## Licencia
-Software propietario — todos los derechos reservados. Ver [LICENSE](LICENSE).
+© 2026 Mateo Pavoni. Software propietario, publicado solo con fines de evaluación/portfolio.
+Prohibida su copia, redistribución o reuso sin autorización escrita. Ver [LICENSE](LICENSE).
 
 ## Changelog
 | Versión | Fecha | Cambio |
