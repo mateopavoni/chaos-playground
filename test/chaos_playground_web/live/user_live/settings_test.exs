@@ -12,7 +12,7 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
         |> log_in_user(user_fixture())
         |> live(~p"/users/settings")
 
-      assert html =~ "Save Password"
+      assert html =~ "Guardar contraseña"
     end
 
     test "redirects if user is not logged in", %{conn: conn} do
@@ -20,7 +20,7 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
 
       assert {:redirect, %{to: path, flash: flash}} = redirect
       assert path == ~p"/users/log-in"
-      assert %{"error" => "You must log in to access this page."} = flash
+      assert %{"error" => "Iniciá sesión para acceder a esta página."} = flash
     end
 
     test "redirects if user is not in sudo mode", %{conn: conn} do
@@ -32,7 +32,7 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
         |> live(~p"/users/settings")
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert conn.resp_body =~ "You must re-authenticate"
+      assert conn.resp_body =~ "Necesitás volver a autenticarte"
     end
   end
 
@@ -82,9 +82,9 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
           }
         })
 
-      assert result =~ "Save Password"
+      assert result =~ "Guardar contraseña"
       assert result =~ "should be at least 12 character"
-      assert result =~ "does not match password"
+      assert result =~ "no coincide con la contraseña"
     end
 
     test "renders errors with invalid data (phx-submit)", %{conn: conn} do
@@ -100,9 +100,9 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
         })
         |> render_submit()
 
-      assert result =~ "Save Password"
+      assert result =~ "Guardar contraseña"
       assert result =~ "should be at least 12 character"
-      assert result =~ "does not match password"
+      assert result =~ "no coincide con la contraseña"
     end
   end
 end

@@ -8,8 +8,8 @@ defmodule ChaosPlaygroundWeb.UserLive.LoginTest do
     test "renders login page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "Log in"
-      assert html =~ "Sign up"
+      assert html =~ "Iniciar sesión"
+      assert html =~ "Registrate"
     end
   end
 
@@ -40,7 +40,7 @@ defmodule ChaosPlaygroundWeb.UserLive.LoginTest do
       render_submit(form, %{user: %{remember_me: true}})
 
       conn = follow_trigger_action(form, conn)
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid email or password"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Email o contraseña inválidos"
 
       assert redirected_to(conn) == ~p"/users/log-in"
     end
@@ -52,11 +52,11 @@ defmodule ChaosPlaygroundWeb.UserLive.LoginTest do
 
       {:ok, _login_live, login_html} =
         lv
-        |> element("main a", "Sign up")
+        |> element("main a", "Registrate")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/register")
 
-      assert login_html =~ "Register"
+      assert login_html =~ "Crear cuenta"
     end
   end
 end

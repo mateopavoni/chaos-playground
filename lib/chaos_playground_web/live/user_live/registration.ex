@@ -11,13 +11,12 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
       <div class="mx-auto max-w-sm">
         <div class="text-center">
           <.header>
-            Register for an account
+            Crear cuenta
             <:subtitle>
-              Already registered?
+              ¿Ya tenés cuenta?
               <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
-                Log in
+                Iniciá sesión
               </.link>
-              to your account now.
             </:subtitle>
           </.header>
         </div>
@@ -42,7 +41,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
           <.input
             field={@form[:password]}
             type="password"
-            label="Password"
+            label="Contraseña"
             autocomplete="new-password"
             spellcheck="false"
             required
@@ -50,14 +49,14 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
           <.input
             field={@form[:password_confirmation]}
             type="password"
-            label="Confirm password"
+            label="Confirmar contraseña"
             autocomplete="new-password"
             spellcheck="false"
             required
           />
 
-          <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
-            Create an account
+          <.button phx-disable-with="Creando cuenta…" class="btn btn-primary w-full">
+            Crear cuenta
           </.button>
         </.form>
       </div>

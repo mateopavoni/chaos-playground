@@ -1,18 +1,30 @@
 defmodule ChaosPlaygroundWeb.PlaygroundLive do
   use ChaosPlaygroundWeb, :live_view
 
-  alias ChaosPlayground.Engine.{NodeServer, NodeSupervisor, Presets, Topology, TrafficSimulator}
+  alias ChaosPlayground.Engine.{
+    ChaosMonkey,
+    NodeServer,
+    NodeSupervisor,
+    Presets,
+    Topology,
+    TrafficSimulator
+  }
   alias ChaosPlayground.Topologies
+  alias ChaosPlaygroundWeb.Presence
 
   @metrics_tick_ms 500
   @metrics_window_ms 2_000
   @history_max 40
+  @presence_topic "playground:visitors"
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     if connected?(socket) do
       pubsub_subscribe()
+      Phoenix.PubSub.subscribe(ChaosPlayground.PubSub, @presence_topic)
+      {:ok, _} = Presence.track(self(), @presence_topic, socket.id, %{})
       Process.send_after(self(), :tick_metrics, @metrics_tick_ms)
+      maybe_apply_preset_param(params["preset"])
     end
 
     # ponytail: buffer de paquetes crudos en el process dictionary, no en assigns —
@@ -29,6 +41,8 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
       |> assign(:entry_candidates, Topology.entry_candidates(topology))
       |> assign(:entry_node, engine.entry_node || topology.entry_node)
       |> assign(:running?, engine.running?)
+      |> assign(:chaos_monkey?, ChaosMonkey.enabled?())
+      |> assign(:visitor_count, presence_count())
       |> assign(:rps, engine.rps)
       |> assign(:metrics, %{rps: 0, p99_ms: 0, error_rate: 0.0})
       |> assign(:metrics_history, [])
@@ -42,6 +56,39 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   defp pubsub_subscribe do
     for topic <- ~w(nodes packets metrics topology) do
       Phoenix.PubSub.subscribe(ChaosPlayground.PubSub, topic)
+    end
+  end
+
+  defp presence_count, do: @presence_topic |> Presence.list() |> map_size() |> max(1)
+
+  # Un ciclo (A->B->...->A) hace que TrafficSimulator.route_to_next_hop se llame a si mismo
+  # para siempre por paquete — nada mas lo frena. Se rechaza la conexion si `to` ya puede
+  # llegar de vuelta a `from` por las conexiones existentes.
+  defp creates_cycle?(nodes, from, to), do: reaches?(nodes, to, from, MapSet.new())
+
+  defp reaches?(_nodes, current, target, _visited) when current == target, do: true
+
+  defp reaches?(nodes, current, target, visited) do
+    if MapSet.member?(visited, current) do
+      false
+    else
+      visited = MapSet.put(visited, current)
+
+      case Map.get(nodes, current) do
+        nil -> false
+        %{connections: conns} -> Enum.any?(conns, &reaches?(nodes, &1, target, visited))
+      end
+    end
+  end
+
+  # ?preset=<nombre> permite linkear directo a un preset builtin (ej. para compartir
+  # una topologia rota). Nombre invalido/ausente => no-op, se queda con lo que ya haya.
+  defp maybe_apply_preset_param(nil), do: :ok
+
+  defp maybe_apply_preset_param(name) do
+    case Enum.find(Presets.list(), &(&1.name == name)) do
+      nil -> :ok
+      preset -> Topology.apply!(preset)
     end
   end
 
@@ -89,6 +136,10 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   def handle_event("set_entry_node", %{"entry_node" => id}, socket) do
     TrafficSimulator.set_entry_node(id)
     {:noreply, assign(socket, :entry_node, id)}
+  end
+
+  def handle_event("toggle_chaos_monkey", _params, socket) do
+    {:noreply, assign(socket, :chaos_monkey?, ChaosMonkey.toggle())}
   end
 
   # Presets
@@ -153,8 +204,13 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   end
 
   def handle_event("connect_nodes", %{"from" => from, "to" => to}, socket) when from != to do
-    NodeServer.connect(from, to)
-    {:noreply, socket}
+    if creates_cycle?(socket.assigns.nodes, from, to) do
+      {:noreply,
+       put_flash(socket, :error, "Esa conexión cerraría un ciclo — el tráfico daría vueltas para siempre")}
+    else
+      NodeServer.connect(from, to)
+      {:noreply, socket}
+    end
   end
 
   def handle_event("connect_nodes", _params, socket), do: {:noreply, socket}
@@ -218,6 +274,10 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
     entry = Map.put(result, :ts, System.monotonic_time(:millisecond))
     Process.put(:metrics_buffer, [entry | Process.get(:metrics_buffer, [])])
     {:noreply, socket}
+  end
+
+  def handle_info(%{event: "presence_diff"}, socket) do
+    {:noreply, assign(socket, :visitor_count, presence_count())}
   end
 
   def handle_info({:topology_changed, topology}, socket) do

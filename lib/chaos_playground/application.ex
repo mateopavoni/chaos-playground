@@ -12,10 +12,12 @@ defmodule ChaosPlayground.Application do
       ChaosPlayground.Repo,
       {DNSCluster, query: Application.get_env(:chaos_playground, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ChaosPlayground.PubSub},
+      ChaosPlaygroundWeb.Presence,
       ChaosPlayground.RateLimit,
       ChaosPlayground.Engine.NodeRegistry,
       ChaosPlayground.Engine.NodeSupervisor,
       ChaosPlayground.Engine.TrafficSimulator,
+      ChaosPlayground.Engine.ChaosMonkey,
       # Start to serve requests, typically the last entry
       ChaosPlaygroundWeb.Endpoint
     ]

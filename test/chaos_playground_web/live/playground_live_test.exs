@@ -5,7 +5,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias ChaosPlayground.Engine.{Presets, Topology, TrafficSimulator}
+  alias ChaosPlayground.Engine.{NodeServer, Presets, Topology, TrafficSimulator}
 
   setup do
     Topology.apply!(hd(Presets.list()))
@@ -51,5 +51,24 @@ defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
 
     assert html =~ "db-replica"
     refute html =~ "monolith-lb"
+  end
+
+  test "connecting nodes into a cycle is rejected", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/")
+
+    # monolith-lb -> monolith-app ya existe en el preset default; conectar en el
+    # sentido inverso cerraria un ciclo de 2 nodos (TrafficSimulator.route_to_next_hop
+    # recursaria para siempre sobre ese ciclo).
+    html = render_hook(view, "connect_nodes", %{"from" => "monolith-app", "to" => "monolith-lb"})
+
+    assert html =~ "cerraría un ciclo"
+    refute "monolith-lb" in NodeServer.get_state("monolith-app").connections
+  end
+
+  test "?preset= query param loads that preset directly", %{conn: conn} do
+    name = "Primary/Replica DB + Load Balancer"
+    {:ok, _view, html} = live(conn, "/?preset=" <> URI.encode_www_form(name))
+
+    assert html =~ "db-replica"
   end
 end

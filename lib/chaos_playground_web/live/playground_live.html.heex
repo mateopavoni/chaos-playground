@@ -53,6 +53,14 @@
         <span class="font-data text-[10px] uppercase tracking-wide text-base-content/40">20s</span>
       </div>
 
+      <div
+        class="hidden items-center gap-1.5 font-data text-xs text-base-content/50 sm:flex"
+        title="El canvas es compartido: todos los que están viendo esta página ven la misma topología en vivo"
+      >
+        <.icon name="hero-users" class="size-4" />
+        {@visitor_count}
+      </div>
+
       <dl id="metrics-dl" class="flex gap-6 font-data text-sm">
         <div>
           <dt class="text-xs uppercase tracking-wide text-base-content/50">RPS</dt>
@@ -302,6 +310,19 @@
           <span id="guided-demo-label">Demo guiada (45s)</span>
         </button>
 
+        <button
+          phx-click="toggle_chaos_monkey"
+          title="Mata un nodo vivo al azar cada pocos segundos, sin intervención — chaos engineering en piloto automático"
+          class={[
+            "btn btn-sm mt-2 w-full",
+            @chaos_monkey? && "btn-error",
+            !@chaos_monkey? && "btn-outline"
+          ]}
+        >
+          <.icon name="hero-bolt" class="size-4" />
+          {if @chaos_monkey?, do: "Chaos Monkey: ON", else: "Chaos Monkey: OFF"}
+        </button>
+
         <label for="rps-input" class="mt-3 block text-xs text-base-content/60">
           RPS objetivo: <span class="font-data">{@rps}</span>
         </label>
@@ -338,13 +359,23 @@
 
         <div class="flex flex-col gap-2">
           <%= for preset <- @builtin_presets do %>
-            <button
-              phx-click="load_preset"
-              phx-value-name={preset.name}
-              class="btn btn-outline btn-sm justify-start"
-            >
-              <.icon name="hero-squares-2x2" class="size-4" /> {preset.name}
-            </button>
+            <div class="flex items-center gap-1">
+              <button
+                phx-click="load_preset"
+                phx-value-name={preset.name}
+                class="btn btn-outline btn-sm flex-1 justify-start"
+              >
+                <.icon name="hero-squares-2x2" class="size-4" /> {preset.name}
+              </button>
+              <button
+                type="button"
+                class="copy-preset-link btn btn-outline btn-sm px-2"
+                data-preset={preset.name}
+                title="Copiar link directo a este preset"
+              >
+                <.icon name="hero-link" class="size-4" />
+              </button>
+            </div>
           <% end %>
         </div>
 
@@ -847,6 +878,24 @@
       });
 
       demoBtn.addEventListener("click", runGuidedDemo);
+
+      // Los presets built-in son fijos (no cambian en runtime), asi que alcanza con
+      // engancharlos una vez al cargar la pagina en vez de un phx-hook.
+      document.querySelectorAll(".copy-preset-link").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const url = `${location.origin}${location.pathname}?preset=${encodeURIComponent(btn.dataset.preset)}`;
+          const icon = btn.querySelector("span");
+          try {
+            await navigator.clipboard.writeText(url);
+            if (icon) {
+              icon.classList.replace("hero-link", "hero-check");
+              setTimeout(() => icon.classList.replace("hero-check", "hero-link"), 1200);
+            }
+          } catch {
+            window.prompt("Copiá el link:", url);
+          }
+        });
+      });
     })();
   </script>
 </div>

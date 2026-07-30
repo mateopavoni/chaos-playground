@@ -8,16 +8,16 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
       <div class="mx-auto max-w-sm space-y-4">
         <div class="text-center">
           <.header>
-            <p>Log in</p>
+            <p>Iniciar sesión</p>
             <:subtitle>
               <%= if @current_scope do %>
-                You need to reauthenticate to perform sensitive actions on your account.
+                Necesitás volver a autenticarte para hacer esta acción.
               <% else %>
-                Don't have an account? <.link
+                ¿No tenés cuenta? <.link
                   navigate={~p"/users/register"}
                   class="font-semibold text-brand hover:underline"
                   phx-no-format
-                >Sign up</.link> for an account now.
+                >Registrate</.link> gratis.
               <% end %>
             </:subtitle>
           </.header>
@@ -44,15 +44,15 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
           <.input
             field={@form[:password]}
             type="password"
-            label="Password"
+            label="Contraseña"
             autocomplete="current-password"
             spellcheck="false"
           />
           <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
-            Log in and stay logged in <span aria-hidden="true">→</span>
+            Iniciar sesión y quedar logueado <span aria-hidden="true">→</span>
           </.button>
           <.button class="btn btn-primary btn-soft w-full mt-2">
-            Log in only this time
+            Iniciar sesión solo esta vez
           </.button>
         </.form>
       </div>

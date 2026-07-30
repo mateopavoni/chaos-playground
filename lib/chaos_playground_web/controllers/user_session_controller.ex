@@ -5,7 +5,7 @@ defmodule ChaosPlaygroundWeb.UserSessionController do
   alias ChaosPlaygroundWeb.UserAuth
 
   def create(conn, params) do
-    create(conn, params, "Welcome back!")
+    create(conn, params, "¡Bienvenido de nuevo!")
   end
 
   defp create(conn, %{"user" => user_params}, info) do
@@ -18,7 +18,7 @@ defmodule ChaosPlaygroundWeb.UserSessionController do
     else
       # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
       conn
-      |> put_flash(:error, "Invalid email or password")
+      |> put_flash(:error, "Email o contraseña inválidos")
       |> put_flash(:email, String.slice(email, 0, 160))
       |> redirect(to: ~p"/users/log-in")
     end
@@ -34,12 +34,12 @@ defmodule ChaosPlaygroundWeb.UserSessionController do
 
     conn
     |> put_session(:user_return_to, ~p"/users/settings")
-    |> create(params, "Password updated successfully!")
+    |> create(params, "Contraseña actualizada.")
   end
 
   def delete(conn, _params) do
     conn
-    |> put_flash(:info, "Logged out successfully.")
+    |> put_flash(:info, "Sesión cerrada.")
     |> UserAuth.log_out_user()
   end
 end

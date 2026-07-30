@@ -11,7 +11,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Settings do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="text-center">
         <.header>
-          Account Settings
+          Tu cuenta
           <:subtitle>Cambiá tu contraseña</:subtitle>
         </.header>
       </div>
@@ -35,7 +35,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Settings do
         <.input
           field={@password_form[:password]}
           type="password"
-          label="New password"
+          label="Contraseña nueva"
           autocomplete="new-password"
           spellcheck="false"
           required
@@ -43,12 +43,12 @@ defmodule ChaosPlaygroundWeb.UserLive.Settings do
         <.input
           field={@password_form[:password_confirmation]}
           type="password"
-          label="Confirm new password"
+          label="Confirmar contraseña nueva"
           autocomplete="new-password"
           spellcheck="false"
         />
-        <.button variant="primary" phx-disable-with="Saving...">
-          Save Password
+        <.button variant="primary" phx-disable-with="Guardando…">
+          Guardar contraseña
         </.button>
       </.form>
     </Layouts.app>

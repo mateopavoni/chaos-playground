@@ -147,7 +147,7 @@ defmodule ChaosPlayground.AccountsTest do
 
       assert %{
                password: ["should be at least 12 character(s)"],
-               password_confirmation: ["does not match password"]
+               password_confirmation: ["no coincide con la contraseña"]
              } = errors_on(changeset)
     end
 
