@@ -116,31 +116,6 @@ docker compose run --rm app mix test
 preset), auth y rate limiting. `async: false` a propósito — el engine es un singleton global, no hay
 aislamiento por test. 2 tests son flaky por ese mismo motivo (documentado en `.claude/CLAUDE.md`).
 
-## Performance
-```bash
-npx lighthouse https://chaos-playground.mateopavoni.com.ar --only-categories=performance,accessibility,best-practices,seo
-```
-Medido en vivo contra la demo pública (2026-07-30):
-
-| Categoría | Score |
-|---|---|
-| Performance | 97 |
-| Accessibility | 89 |
-| Best Practices | 96 |
-| SEO | 82 |
-
-| Métrica | Valor |
-|---|---|
-| First Contentful Paint | 1.7s |
-| Largest Contentful Paint | 2.5s |
-| Total Blocking Time | 60ms |
-| Cumulative Layout Shift | 0 |
-| Speed Index | 2.6s |
-
-El canvas es un engine compartido en vivo (Chaos Monkey puede estar corriendo mientras se audita),
-así que el resultado puede variar corrida a corrida según qué esté pasando en el server en ese
-momento — no es un entorno de benchmark aislado.
-
 ## Limitaciones conocidas
 - **El canvas es un único engine global, compartido por todos los visitantes** — no hay aislamiento
   por sesión/usuario. Cargar un preset (propio o built-in) cambia lo que ve todo el mundo conectado,
@@ -157,14 +132,3 @@ momento — no es un entorno de benchmark aislado.
 ## Licencia
 © 2026 Mateo Pavoni. Software propietario, publicado solo con fines de evaluación/portfolio.
 Prohibida su copia, redistribución o reuso sin autorización escrita. Ver [LICENSE](LICENSE).
-
-## Changelog
-| Versión | Fecha | Cambio |
-|---------|-------|--------|
-| v0.1.0 | 2026-07-20 | Scaffold inicial (Phoenix 1.8 LiveView, Ecto/Postgres, docker-compose de desarrollo) |
-| v0.2.0 | 2026-07-20 | Motor OTP: nodos como GenServer supervisados, tráfico simulado con Task concurrente por paquete |
-| v0.3.0 | 2026-07-20 | Canvas LiveView con drag-to-connect y partículas animadas, chaos actions, presets built-in + guardados en Postgres, dashboard de métricas |
-| v0.4.0 | 2026-07-21 | Identidad visual propia (tema oscuro por default, acento naranja, glow en nodos, transición circular en el toggle de tema), Portfolio Pack |
-| v0.5.0 | 2026-07-21 | Deploy productivo (Dokku + Postgres + TLS), gráfico de RPS/error rate en tiempo real, modal de bienvenida + demo guiada automática, ayuda in-app |
-| v0.6.0 | 2026-07-29 | Auth con `mix phx.gen.auth` (registro/login, presets guardados por usuario), Chaos Monkey autónomo, contador de visitantes (`Phoenix.Presence`), links directos a preset, fix de ciclos en conexiones y de kill invisible en el canvas compartido |
-| v0.6.1 | 2026-07-30 | Fix del toggle de tema en las páginas de auth, demo guiada que resetea el canvas antes de arrancar, tamaño de partículas escalado (log, no lineal) para que se note la diferencia en todo el rango de RPS |
