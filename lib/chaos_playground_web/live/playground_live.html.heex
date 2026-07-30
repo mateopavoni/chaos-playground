@@ -273,12 +273,14 @@
               // Log en vez de lineal: con lineal, a los ~7 paquetes en vuelo por
               // tramo ya se tocaba el piso y de ahi para arriba (desde ~80 rps)
               // todo se veia igual de chico. Log estira la caida en todo el rango.
-              // ponytail: piso en 1 (no 1.5) y pendiente mas floja (0.35, no 0.45):
-              // con los valores viejos el piso se tocaba a los ~47 en vuelo, bien
-              // adentro del rango real (RPS max 200 ~ 70-100 en vuelo en el tramo
-              // de entrada), asi que de ahi para arriba todo se volvia a ver igual.
-              // Con estos, el piso recien se toca cerca de 380 en vuelo.
-              const r = Math.max(1, 4 - Math.log2(inFlight) * 0.35);
+              // ponytail: piso en 1 (no 1.5), pendiente 0.45 sin tocar.
+              // Bajar solo el piso no alcanzaba: con pendiente 0.35 el piso ya no
+              // se tocaba nunca en el rango real, pero la caida quedaba tan floja
+              // (2.56px a 50 rps vs 1.85px a 200 rps) que se veia "siempre igual".
+              // Con 0.45 el piso se toca recien en el borde del slider (~100 en
+              // vuelo, RPS max 200), y de 1 a 200 rps el radio cae de forma bien
+              // perceptible (4px -> ~1.2px) en vez de quedarse plano.
+              const r = Math.max(1, 4 - Math.log2(inFlight) * 0.45);
 
               const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
               dot.setAttribute("r", r);
