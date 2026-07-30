@@ -411,11 +411,11 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   defp type_label(:cache), do: "CACHE"
   defp type_label(:queue), do: "MQ"
 
-  defp node_fill_class(:healthy), do: "fill-status-healthy text-status-healthy"
+  defp node_fill_class(:healthy), do: "fill-primary text-primary"
   defp node_fill_class(:degraded), do: "fill-status-degraded text-status-degraded"
   defp node_fill_class(:dead), do: "fill-status-dead text-status-dead"
 
-  defp status_badge_class(:healthy), do: "bg-status-healthy/20 text-status-healthy"
+  defp status_badge_class(:healthy), do: "bg-primary/20 text-primary"
   defp status_badge_class(:degraded), do: "bg-status-degraded/20 text-status-degraded"
   defp status_badge_class(:dead), do: "bg-status-dead/20 text-status-dead"
 end

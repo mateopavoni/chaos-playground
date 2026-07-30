@@ -96,16 +96,14 @@
 @theme {
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-data: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
-  --color-status-healthy: oklch(62% 0.19 250);
   --color-status-degraded: oklch(80% 0.19 80);
   --color-status-dead: oklch(50% 0.22 15);
 }
 
-/* Color de las particulas de trafico: tiene que distinguirse de los nodos (siempre
-   azul, --color-status-healthy) y de las lineas de conexion (fill-primary/stroke-primary,
-   que cambia de naranja en dark a azul en light). Por eso no puede ser fill-primary: en
-   light quedaba azul sobre azul, indistinguible de los nodos. Naranja en light, azul en
-   dark - el swap opuesto a --color-primary. */
+/* Los nodos sanos y las lineas de conexion siguen el acento del tema (fill-primary/
+   stroke-primary: naranja en dark, azul en light). Las particulas de trafico necesitan
+   el swap opuesto para contrastar contra ambos - azul en dark, naranja en light -, asi
+   que no pueden ser fill-primary tambien (quedarian del mismo color que lo que atraviesan). */
 [data-theme="light"] {
   --color-particle: oklch(70% 0.19 45);
 }
