@@ -43,6 +43,12 @@ defmodule ChaosPlayground.Engine.NodeServer do
   @spec get_state(String.t()) :: t() | {:error, :not_found}
   def get_state(id), do: call(id, :get_state)
 
+  # ponytail: Process.exit(pid, :kill) en NodeSupervisor.kill_node no dispara terminate/2,
+  # asi que sin esto solo el browser que pidio el kill se enteraba (update optimista local) —
+  # el resto de los visitantes del canvas compartido nunca veia el nodo caer.
+  @spec mark_dead(String.t()) :: t() | {:error, :not_found}
+  def mark_dead(id), do: call(id, :mark_dead)
+
   @spec handle_packet(String.t(), map()) :: {:ok, map()} | {:error, atom()}
   def handle_packet(id, packet), do: call(id, {:handle_packet, packet})
 
@@ -87,6 +93,12 @@ defmodule ChaosPlayground.Engine.NodeServer do
 
   @impl true
   def handle_call(:get_state, _from, state), do: {:reply, state, state}
+
+  def handle_call(:mark_dead, _from, state) do
+    new_state = %{state | status: :dead}
+    broadcast(new_state)
+    {:reply, new_state, new_state}
+  end
 
   def handle_call({:handle_packet, packet}, _from, state) do
     if state.latency_ms > 0, do: Process.sleep(state.latency_ms)

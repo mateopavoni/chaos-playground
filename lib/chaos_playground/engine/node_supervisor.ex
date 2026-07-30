@@ -23,6 +23,7 @@ defmodule ChaosPlayground.Engine.NodeSupervisor do
         {:error, :not_found}
 
       pid ->
+        NodeServer.mark_dead(node_id)
         Process.exit(pid, :kill)
         :ok
     end

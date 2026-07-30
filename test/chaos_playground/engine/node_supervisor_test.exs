@@ -25,6 +25,16 @@ defmodule ChaosPlayground.Engine.NodeSupervisorTest do
     assert NodeSupervisor.kill_node("ghost") == {:error, :not_found}
   end
 
+  test "kill_node broadcasts the node as dead so every viewer of the shared canvas sees it, not just the caller" do
+    id = "node-#{System.unique_integer([:positive])}"
+    {:ok, _pid} = NodeSupervisor.start_node(id: id, type: :api_server)
+    Phoenix.PubSub.subscribe(ChaosPlayground.PubSub, "nodes")
+
+    :ok = NodeSupervisor.kill_node(id)
+
+    assert_receive {:node_updated, %NodeServer{id: ^id, status: :dead}}
+  end
+
   defp wait_until(fun, attempts \\ 20) do
     cond do
       fun.() ->
