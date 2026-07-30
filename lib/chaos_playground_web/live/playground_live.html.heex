@@ -270,7 +270,10 @@
               this.edgeCounts ??= new Map();
               const inFlight = (this.edgeCounts.get(edgeKey) ?? 0) + 1;
               this.edgeCounts.set(edgeKey, inFlight);
-              const r = Math.max(1.5, 4 - (inFlight - 1) * 0.4);
+              // Log en vez de lineal: con lineal, a los ~7 paquetes en vuelo por
+              // tramo ya se tocaba el piso y de ahi para arriba (desde ~80 rps)
+              // todo se veia igual de chico. Log estira la caida en todo el rango.
+              const r = Math.max(1.5, 4 - Math.log2(inFlight) * 0.45);
 
               const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
               dot.setAttribute("r", r);
