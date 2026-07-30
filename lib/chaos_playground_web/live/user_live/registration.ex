@@ -29,6 +29,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
           phx-change="validate"
           phx-trigger-action={@trigger_submit}
         >
+          <input type="hidden" name="source" value="register" />
           <.input
             field={@form[:email]}
             type="email"

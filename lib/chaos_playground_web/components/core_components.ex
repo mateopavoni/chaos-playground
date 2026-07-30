@@ -61,6 +61,7 @@ defmodule ChaosPlaygroundWeb.CoreComponents do
     <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
+      phx-hook=".FlashAutoHide"
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class="toast toast-top toast-end z-50"
@@ -68,7 +69,7 @@ defmodule ChaosPlaygroundWeb.CoreComponents do
     >
       <div class={[
         "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
-        @kind == :info && "alert-info",
+        @kind == :info && "bg-primary text-primary-content",
         @kind == :error && "alert-error"
       ]}>
         <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
@@ -82,6 +83,19 @@ defmodule ChaosPlaygroundWeb.CoreComponents do
           <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
         </button>
       </div>
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".FlashAutoHide">
+        export default {
+          mounted() {
+            // ponytail: 6s fijo, sube a config si algun dia hace falta variar por kind
+            this.timer = setTimeout(() => {
+              this.js().exec(this.el.getAttribute("phx-click"));
+            }, 6000);
+          },
+          destroyed() {
+            clearTimeout(this.timer);
+          }
+        }
+      </script>
     </div>
     """
   end

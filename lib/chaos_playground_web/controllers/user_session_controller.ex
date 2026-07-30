@@ -4,6 +4,10 @@ defmodule ChaosPlaygroundWeb.UserSessionController do
   alias ChaosPlayground.Accounts
   alias ChaosPlaygroundWeb.UserAuth
 
+  def create(conn, %{"source" => "register"} = params) do
+    create(conn, params, "¡Bienvenido! Tu cuenta fue creada.")
+  end
+
   def create(conn, params) do
     create(conn, params, "¡Bienvenido de nuevo!")
   end

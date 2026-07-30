@@ -284,7 +284,7 @@
               dot.setAttribute("r", r);
               dot.setAttribute("cx", x1);
               dot.setAttribute("cy", y1);
-              dot.setAttribute("class", "fill-primary");
+              dot.setAttribute("class", "fill-particle");
               this.particles.appendChild(dot);
 
               const anim = dot.animate(
@@ -383,9 +383,11 @@
               <button
                 phx-click="load_preset"
                 phx-value-name={preset.name}
-                class="btn btn-outline btn-sm flex-1 justify-start"
+                class="btn btn-outline btn-sm flex-1 min-w-0 justify-start"
+                title={preset.name}
               >
-                <.icon name="hero-squares-2x2" class="size-4" /> {preset.name}
+                <.icon name="hero-squares-2x2" class="size-4 shrink-0" />
+                <span class="truncate">{preset.name}</span>
               </button>
               <button
                 type="button"
@@ -405,9 +407,11 @@
               <button
                 phx-click="load_saved"
                 phx-value-id={saved.id}
-                class="btn btn-ghost btn-sm justify-start"
+                class="btn btn-ghost btn-sm min-w-0 justify-start"
+                title={saved.name}
               >
-                <.icon name="hero-bookmark" class="size-4" /> {saved.name}
+                <.icon name="hero-bookmark" class="size-4 shrink-0" />
+                <span class="truncate">{saved.name}</span>
               </button>
             <% end %>
           </div>

@@ -101,6 +101,21 @@
   --color-status-dead: oklch(50% 0.22 15);
 }
 
+/* Color de las particulas de trafico: tiene que distinguirse de los nodos (siempre
+   azul, --color-status-healthy) y de las lineas de conexion (fill-primary/stroke-primary,
+   que cambia de naranja en dark a azul en light). Por eso no puede ser fill-primary: en
+   light quedaba azul sobre azul, indistinguible de los nodos. Naranja en light, azul en
+   dark - el swap opuesto a --color-primary. */
+[data-theme="light"] {
+  --color-particle: oklch(70% 0.19 45);
+}
+[data-theme="dark"] {
+  --color-particle: oklch(62% 0.19 250);
+}
+.fill-particle {
+  fill: var(--color-particle);
+}
+
 body {
   font-family: var(--font-display);
 }

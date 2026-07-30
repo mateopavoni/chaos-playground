@@ -58,6 +58,22 @@ defmodule ChaosPlaygroundWeb.UserSessionControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "¡Bienvenido de nuevo!"
     end
 
+    test "shows a distinct welcome message when coming from registration", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        post(conn, ~p"/users/log-in", %{
+          "source" => "register",
+          "user" => %{
+            "email" => user.email,
+            "password" => valid_user_password()
+          }
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "cuenta fue creada"
+    end
+
     test "redirects to login page with invalid credentials", %{conn: conn, user: user} do
       conn =
         post(conn, ~p"/users/log-in", %{
