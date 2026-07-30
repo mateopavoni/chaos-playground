@@ -19,8 +19,9 @@ arma una topología, genera tráfico y mata un nodo en vivo, sola. Login opciona
 tus propias topologías; el canvas y el chaos engineering no lo piden.
 
 ### Capturas
-_Pendiente — capturar el canvas con tráfico corriendo y el Inspector abierto antes de la próxima
-versión del portfolio._
+| Light | Dark |
+|---|---|
+| ![Canvas en tema claro, tráfico corriendo](docs/screenshots/canvas-light.png) | ![Canvas en tema oscuro, tráfico corriendo](docs/screenshots/canvas-dark.png) |
 
 ---
 
