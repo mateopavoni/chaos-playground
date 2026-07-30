@@ -70,8 +70,6 @@ Application
 ## Qué seguiría (con más tiempo)
 - **Circuit breaker real en `NodeServer`:** N fallos consecutivos → auto-`:degraded` con load shedding,
   cooldown para auto-recuperar, en vez de un `failure_rate` fijo hasta que alguien lo cambia a mano.
-- **Chaos Monkey autónomo:** un proceso que mata/degrada nodos al azar en un intervalo configurable
-  (toggle on/off), para que la demo se sostenga sola en un video sin intervención manual.
 - **Cluster real con `libcluster`:** hoy todos los "nodos" son procesos en la misma BEAM; con 2+ nodos
   Erlang reales conectados (ej. Fly.io multi-región), "matar un nodo" podría significar matar una VM
   entera, no solo un proceso local.
