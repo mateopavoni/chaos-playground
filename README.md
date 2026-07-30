@@ -1,7 +1,11 @@
 # Chaos Playground
 
-**Un canvas de infraestructura donde cada nodo es un proceso Erlang/OTP real** — matar un nodo desde
-la UI termina su `GenServer` de verdad, no una animación en JS.
+> **Playground de Chaos Engineering y resiliencia de red** (al estilo Gremlin / Chaos Monkey)
+> construido alrededor de un problema difícil: **demostrar "let it crash" sin simularlo**, con la
+> garantía de que la caída de un nodo es real, no una animación. Cada nodo del canvas — load
+> balancer, API server, DB, cache, queue — es un `GenServer` de Erlang/OTP real bajo un
+> `DynamicSupervisor`; matar un nodo desde la UI es literalmente `Process.exit(pid, :kill)` sobre
+> ese proceso, verificable leyendo el motor OTP, no solo prometido en este README.
 
 [![demo](https://img.shields.io/badge/demo-live-brightgreen)](https://chaos-playground.mateopavoni.com.ar/)
 ![stack](https://img.shields.io/badge/stack-Elixir%20%C2%B7%20Phoenix%20LiveView%20%C2%B7%20PostgreSQL-2b2b2b)
