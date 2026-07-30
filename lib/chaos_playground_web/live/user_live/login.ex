@@ -36,6 +36,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
             field={f[:email]}
             type="email"
             label="Email"
+            placeholder="vos@ejemplo.com"
             autocomplete="username"
             spellcheck="false"
             required
@@ -45,6 +46,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
             field={@form[:password]}
             type="password"
             label="Contraseña"
+            placeholder="Tu contraseña"
             autocomplete="current-password"
             spellcheck="false"
           />

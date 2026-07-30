@@ -36,6 +36,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Settings do
           field={@password_form[:password]}
           type="password"
           label="Contraseña nueva"
+          placeholder="Mínimo 12 caracteres"
           autocomplete="new-password"
           spellcheck="false"
           required
@@ -44,6 +45,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Settings do
           field={@password_form[:password_confirmation]}
           type="password"
           label="Confirmar contraseña nueva"
+          placeholder="Repetí la contraseña nueva"
           autocomplete="new-password"
           spellcheck="false"
         />

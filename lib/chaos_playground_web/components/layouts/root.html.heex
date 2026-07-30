@@ -43,8 +43,10 @@
     {@inner_content}
     <script>
       (() => {
-        const btn = document.getElementById("theme-toggle");
-        btn.addEventListener("click", (e) => {
+        document.addEventListener("click", (e) => {
+          const btn = e.target.closest("#theme-toggle");
+          if (!btn) return;
+
           const current = document.documentElement.getAttribute("data-theme");
           const next = current === "dark" ? "light" : "dark";
           const apply = () => {

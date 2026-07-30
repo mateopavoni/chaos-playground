@@ -33,6 +33,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
             field={@form[:email]}
             type="email"
             label="Email"
+            placeholder="vos@ejemplo.com"
             autocomplete="username"
             spellcheck="false"
             required
@@ -42,6 +43,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
             field={@form[:password]}
             type="password"
             label="Contraseña"
+            placeholder="Mínimo 12 caracteres"
             autocomplete="new-password"
             spellcheck="false"
             required
@@ -50,6 +52,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
             field={@form[:password_confirmation]}
             type="password"
             label="Confirmar contraseña"
+            placeholder="Repetí la contraseña"
             autocomplete="new-password"
             spellcheck="false"
             required

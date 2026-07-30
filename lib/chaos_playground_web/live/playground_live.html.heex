@@ -263,8 +263,17 @@
               const x2 = cx2 - ux * NODE_R;
               const y2 = cy2 - uy * NODE_R;
 
+              // A mucho RPS, varios paquetes viajan juntos por el mismo tramo y el radio
+              // fijo los hacia amontonarse en una fila de puntos pegados. Se achican con
+              // la cantidad de paquetes en vuelo en ESE tramo, asi siempre se ven separados.
+              const edgeKey = `${fromId}->${toId}`;
+              this.edgeCounts ??= new Map();
+              const inFlight = (this.edgeCounts.get(edgeKey) ?? 0) + 1;
+              this.edgeCounts.set(edgeKey, inFlight);
+              const r = Math.max(1.5, 4 - (inFlight - 1) * 0.4);
+
               const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-              dot.setAttribute("r", "4");
+              dot.setAttribute("r", r);
               dot.setAttribute("cx", x1);
               dot.setAttribute("cy", y1);
               dot.setAttribute("class", "fill-primary");
@@ -279,7 +288,10 @@
                 ],
                 { duration: durationMs, easing: "linear", fill: "forwards" }
               );
-              anim.onfinish = () => dot.remove();
+              anim.onfinish = () => {
+                dot.remove();
+                this.edgeCounts.set(edgeKey, (this.edgeCounts.get(edgeKey) ?? 1) - 1);
+              };
             }
           };
         </script>
@@ -730,6 +742,17 @@
         const metricsTarget = document.getElementById("metrics-dl");
         const inspector = document.getElementById("inspector-panel");
         const total = 10;
+
+        // Arranca siempre desde cero: si quedó Chaos Monkey prendido o tráfico
+        // corriendo de una sesión anterior (propia o de otro visitante, el canvas
+        // es compartido), la demo pisa todo antes del primer paso narrado.
+        const chaosMonkeyBtn = document.querySelector('button[phx-click="toggle_chaos_monkey"]');
+        if (chaosMonkeyBtn && chaosMonkeyBtn.classList.contains("btn-error")) {
+          chaosMonkeyBtn.click();
+        }
+        const presetBtn = document.querySelector('button[phx-value-name="Monolith vs Microservices"]');
+        if (presetBtn) fireClick(presetBtn);
+        await wait(400);
 
         await runStep({
           target: metricsTarget,
