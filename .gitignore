@@ -43,6 +43,7 @@ npm-debug.log
 
 # Meta de fábrica (no se publica) — ver .claude/modules/portfolio-pack.md §0
 .claude/
+AGENTS.md
 PORTFOLIO.md
 TASKS.md
 MANUAL-PRUEBAS.md
