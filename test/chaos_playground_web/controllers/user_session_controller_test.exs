@@ -83,6 +83,32 @@ defmodule ChaosPlaygroundWeb.UserSessionControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Email o contraseña inválidos"
       assert redirected_to(conn) == ~p"/users/log-in"
     end
+
+    test "keeps the email when the password is wrong but the email exists", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        post(conn, ~p"/users/log-in", %{
+          "user" => %{"email" => user.email, "password" => "invalid_password"}
+        })
+
+      # el email vuelve al form: solo hay que reintentar la contraseña
+      assert Phoenix.Flash.get(conn.assigns.flash, :email) == user.email
+    end
+
+    test "clears the email when it is not registered, with the same error message", %{conn: conn} do
+      conn =
+        post(conn, ~p"/users/log-in", %{
+          "user" => %{"email" => "desconocido@example.com", "password" => "invalid_password"}
+        })
+
+      # mensaje IDENTICO al de contraseña incorrecta (no filtra si el email existe),
+      # lo unico distinto es que el campo email no se repuebla
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Email o contraseña inválidos"
+      refute Phoenix.Flash.get(conn.assigns.flash, :email)
+      assert redirected_to(conn) == ~p"/users/log-in"
+    end
   end
 
   describe "DELETE /users/log-out" do

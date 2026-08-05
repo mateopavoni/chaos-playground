@@ -42,14 +42,33 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
             required
             phx-mounted={JS.focus()}
           />
-          <.input
-            field={@form[:password]}
-            type="password"
-            label="Contraseña"
-            placeholder="Tu contraseña"
-            autocomplete="current-password"
-            spellcheck="false"
-          />
+          <div class="fieldset mb-2">
+            <label for={f[:password].id} class="label mb-1">Contraseña</label>
+            <div class="relative">
+              <input
+                type="password"
+                id={f[:password].id}
+                name={f[:password].name}
+                class="w-full input pr-11"
+                placeholder="Tu contraseña"
+                autocomplete="current-password"
+                spellcheck="false"
+              />
+              <button
+                type="button"
+                id="login_password_toggle"
+                class="absolute inset-y-0 right-0 flex items-center px-3 opacity-50 hover:opacity-100 cursor-pointer"
+                aria-label="Mostrar contraseña"
+                aria-controls={f[:password].id}
+                phx-click={toggle_password_visibility(f[:password].id)}
+              >
+                <span id="login_password_eye"><.icon name="hero-eye" class="size-5" /></span>
+                <span id="login_password_eye_off" class="hidden">
+                  <.icon name="hero-eye-slash" class="size-5" />
+                </span>
+              </button>
+            </div>
+          </div>
           <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
             Iniciar sesión y quedar logueado <span aria-hidden="true">→</span>
           </.button>
@@ -60,6 +79,18 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
       </div>
     </Layouts.app>
     """
+  end
+
+  # Mostrar/ocultar contraseña: puro JS del lado del cliente (sin round-trip al server,
+  # la contraseña nunca viaja por el socket solo para cambiar el type del input).
+  defp toggle_password_visibility(input_id) do
+    JS.toggle_attribute({"type", "text", "password"}, to: "##{input_id}")
+    |> JS.toggle_attribute(
+      {"aria-label", "Ocultar contraseña", "Mostrar contraseña"},
+      to: "#login_password_toggle"
+    )
+    |> JS.toggle_class("hidden", to: "#login_password_eye")
+    |> JS.toggle_class("hidden", to: "#login_password_eye_off")
   end
 
   @impl true

@@ -20,11 +20,20 @@ defmodule ChaosPlaygroundWeb.UserSessionController do
       |> put_flash(:info, info)
       |> UserAuth.log_in_user(user, user_params)
     else
-      # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
-      conn
-      |> put_flash(:error, "Email o contraseña inválidos")
-      |> put_flash(:email, String.slice(email, 0, 160))
-      |> redirect(to: ~p"/users/log-in")
+      # El mensaje de error es IDENTICO exista o no el email: nada visible (texto, timing,
+      # markup) revela si esta registrado. Lo unico que cambia es la comodidad del reintento:
+      # si el email existe lo dejamos cargado para que solo reescriba la contraseña; si no
+      # existe lo limpiamos (no repoblamos el flash) porque ahi si hay que corregir el email.
+      conn = put_flash(conn, :error, "Email o contraseña inválidos")
+
+      conn =
+        if Accounts.get_user_by_email(email) do
+          put_flash(conn, :email, String.slice(email, 0, 160))
+        else
+          conn
+        end
+
+      redirect(conn, to: ~p"/users/log-in")
     end
   end
 
