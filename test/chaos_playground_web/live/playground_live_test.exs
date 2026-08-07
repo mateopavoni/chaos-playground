@@ -1,16 +1,16 @@
 defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
-  # engine global (Registry/DynamicSupervisor/TrafficSimulator son singletons de la app):
-  # estos tests mutan ese estado compartido, así que corren secuenciales, no async.
-  use ChaosPlaygroundWeb.ConnCase, async: false
+  use ChaosPlaygroundWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 
   alias ChaosPlayground.Engine.{NodeServer, Presets, Topology, TrafficSimulator}
 
-  setup do
-    Topology.apply!(hd(Presets.list()))
-    TrafficSimulator.pause_traffic()
-    :ok
+  setup :register_and_log_in_user
+
+  setup %{user: user} do
+    Topology.apply!(user.id, hd(Presets.list()))
+    TrafficSimulator.pause_traffic(user.id)
+    %{user_id: user.id}
   end
 
   test "mounts and renders the default preset topology", %{conn: conn} do
@@ -50,10 +50,12 @@ defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
     html = render(view)
 
     assert html =~ "db-replica"
-    refute html =~ "monolith-lb"
+    # nota: no usar `refute html =~ "monolith-lb"` a secas — el script del tour guiado
+    # menciona ese id como parte fija del guión, sin relación con la topología cargada.
+    refute html =~ ~s(data-node-id="monolith-lb")
   end
 
-  test "connecting nodes into a cycle is rejected", %{conn: conn} do
+  test "connecting nodes into a cycle is rejected", %{conn: conn, user_id: user_id} do
     {:ok, view, _html} = live(conn, "/")
 
     # monolith-lb -> monolith-app ya existe en el preset default; conectar en el
@@ -62,7 +64,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
     html = render_hook(view, "connect_nodes", %{"from" => "monolith-app", "to" => "monolith-lb"})
 
     assert html =~ "cerraría un ciclo"
-    refute "monolith-lb" in NodeServer.get_state("monolith-app").connections
+    refute "monolith-lb" in NodeServer.get_state(user_id, "monolith-app").connections
   end
 
   test "?preset= query param loads that preset directly", %{conn: conn} do

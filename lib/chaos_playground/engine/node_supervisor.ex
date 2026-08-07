@@ -12,25 +12,24 @@ defmodule ChaosPlayground.Engine.NodeSupervisor do
   @impl true
   def init(:ok), do: DynamicSupervisor.init(strategy: :one_for_one)
 
-  @spec start_node(keyword()) :: DynamicSupervisor.on_start_child()
-  def start_node(attrs), do: DynamicSupervisor.start_child(__MODULE__, {NodeServer, attrs})
+  @spec start_node(term(), keyword()) :: DynamicSupervisor.on_start_child()
+  def start_node(user_id, attrs),
+    do: DynamicSupervisor.start_child(__MODULE__, {NodeServer, [{:user_id, user_id} | attrs]})
 
   @doc "Termina el proceso real del nodo — la acción de chaos 'Kill Process'."
-  @spec kill_node(String.t()) :: :ok | {:error, :not_found}
-  def kill_node(node_id) do
-    case NodeRegistry.whereis(node_id) do
+  @spec kill_node(term(), String.t()) :: :ok | {:error, :not_found}
+  def kill_node(user_id, node_id) do
+    case NodeRegistry.whereis(user_id, node_id) do
       nil ->
         {:error, :not_found}
 
       pid ->
-        NodeServer.mark_dead(node_id)
+        NodeServer.mark_dead(user_id, node_id)
         Process.exit(pid, :kill)
         :ok
     end
   end
 
-  @spec list_node_ids() :: [String.t()]
-  def list_node_ids do
-    Registry.select(NodeRegistry, [{{:"$1", :_, :_}, [], [:"$1"]}])
-  end
+  @spec list_node_ids(term()) :: [String.t()]
+  def list_node_ids(user_id), do: NodeRegistry.list_node_ids(user_id)
 end

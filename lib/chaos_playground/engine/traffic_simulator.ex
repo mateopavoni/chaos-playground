@@ -7,7 +7,7 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
 
   use GenServer
 
-  alias ChaosPlayground.Engine.NodeServer
+  alias ChaosPlayground.Engine.{EngineRegistry, NodeServer}
 
   @tick_ms 200
   # ponytail: duración fija de la animación de un paquete viajando entre dos nodos —
@@ -15,28 +15,33 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
   # de este hop). Subir a un cálculo dinámico si algún día importa que se vea "realista".
   @hop_animation_ms 350
 
-  defstruct running?: false, rps: 5, entry_node: nil, topology: nil
+  defstruct user_id: nil, running?: false, rps: 5, entry_node: nil, topology: nil
 
   # Client API
 
-  def start_link(_opts), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link(user_id),
+    do: GenServer.start_link(__MODULE__, user_id, name: via(user_id))
 
-  def start_traffic, do: GenServer.cast(__MODULE__, :start)
-  def pause_traffic, do: GenServer.cast(__MODULE__, :pause)
+  defp via(user_id), do: EngineRegistry.via_tuple(:traffic_simulator, user_id)
 
-  def set_rps(rps) when is_integer(rps) and rps >= 0,
-    do: GenServer.cast(__MODULE__, {:set_rps, rps})
+  def start_traffic(user_id), do: GenServer.cast(via(user_id), :start)
+  def pause_traffic(user_id), do: GenServer.cast(via(user_id), :pause)
 
-  def set_entry_node(node_id), do: GenServer.cast(__MODULE__, {:set_entry_node, node_id})
-  def set_topology(topology), do: GenServer.cast(__MODULE__, {:set_topology, topology})
-  def get_state, do: GenServer.call(__MODULE__, :get_state)
+  def set_rps(user_id, rps) when is_integer(rps) and rps >= 0,
+    do: GenServer.cast(via(user_id), {:set_rps, rps})
+
+  def set_entry_node(user_id, node_id),
+    do: GenServer.cast(via(user_id), {:set_entry_node, node_id})
+
+  def set_topology(user_id, topology), do: GenServer.cast(via(user_id), {:set_topology, topology})
+  def get_state(user_id), do: GenServer.call(via(user_id), :get_state)
 
   # Server callbacks
 
   @impl true
-  def init(:ok) do
+  def init(user_id) do
     schedule_tick()
-    {:ok, %__MODULE__{}}
+    {:ok, %__MODULE__{user_id: user_id}}
   end
 
   @impl true
@@ -56,7 +61,7 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
   @impl true
   def handle_info(:tick, state) do
     if state.running? and state.entry_node do
-      spawn_packets(state.entry_node, packets_per_tick(state.rps))
+      spawn_packets(state.user_id, state.entry_node, packets_per_tick(state.rps))
     end
 
     schedule_tick()
@@ -65,9 +70,9 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
 
   defp packets_per_tick(rps), do: round(rps * (@tick_ms / 1000))
 
-  defp spawn_packets(_entry_node, 0), do: :ok
+  defp spawn_packets(_user_id, _entry_node, 0), do: :ok
 
-  defp spawn_packets(entry_node, count) do
+  defp spawn_packets(user_id, entry_node, count) do
     # ponytail: separa el arranque de cada paquete a lo largo de la ventana del tick
     # (en vez de lanzarlos todos en el mismo instante) para que dos paquetes en el
     # mismo camino no queden perfectamente superpuestos en el canvas — a RPS alto se
@@ -82,51 +87,51 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
 
       Task.start(fn ->
         if delay > 0, do: Process.sleep(delay)
-        route_packet(packet, entry_node)
+        route_packet(user_id, packet, entry_node)
       end)
     end)
   end
 
-  defp route_packet(packet, node_id) do
-    case NodeServer.handle_packet(node_id, packet) do
+  defp route_packet(user_id, packet, node_id) do
+    case NodeServer.handle_packet(user_id, node_id, packet) do
       {:ok, packet} ->
-        broadcast_metric(:success, packet, node_id, nil)
-        route_to_next_hop(packet, node_id)
+        broadcast_metric(user_id, :success, packet, node_id, nil)
+        route_to_next_hop(user_id, packet, node_id)
 
       {:error, :not_found} ->
         :ok
 
       {:error, reason} ->
-        broadcast_metric(:error, packet, node_id, reason)
+        broadcast_metric(user_id, :error, packet, node_id, reason)
     end
   end
 
-  defp route_to_next_hop(packet, node_id) do
-    case NodeServer.get_state(node_id) do
+  defp route_to_next_hop(user_id, packet, node_id) do
+    case NodeServer.get_state(user_id, node_id) do
       %NodeServer{connections: [_ | _] = neighbors} ->
         next_id = Enum.random(neighbors)
-        broadcast_hop(node_id, next_id)
-        route_packet(packet, next_id)
+        broadcast_hop(user_id, node_id, next_id)
+        route_packet(user_id, packet, next_id)
 
       _ ->
         :ok
     end
   end
 
-  defp broadcast_hop(from_id, to_id) do
+  defp broadcast_hop(user_id, from_id, to_id) do
     Phoenix.PubSub.broadcast(
       ChaosPlayground.PubSub,
-      "packets",
+      "packets:#{user_id}",
       {:packet_hop, %{from: from_id, to: to_id, duration_ms: @hop_animation_ms}}
     )
   end
 
-  defp broadcast_metric(status, packet, node_id, reason) do
+  defp broadcast_metric(user_id, status, packet, node_id, reason) do
     latency_ms = System.monotonic_time(:millisecond) - packet.started_at
 
     Phoenix.PubSub.broadcast(
       ChaosPlayground.PubSub,
-      "metrics",
+      "metrics:#{user_id}",
       {:packet_result,
        %{status: status, node_id: node_id, reason: reason, latency_ms: latency_ms}}
     )

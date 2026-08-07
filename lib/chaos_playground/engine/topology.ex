@@ -14,18 +14,23 @@ defmodule ChaosPlayground.Engine.Topology do
           entry_node: String.t()
         }
 
-  @spec apply!(t()) :: t()
-  def apply!(topology) do
-    NodeSupervisor.list_node_ids() |> Enum.each(&NodeSupervisor.kill_node/1)
+  @spec apply!(term(), t()) :: t()
+  def apply!(user_id, topology) do
+    NodeSupervisor.list_node_ids(user_id) |> Enum.each(&NodeSupervisor.kill_node(user_id, &1))
 
     Enum.each(topology.nodes, fn n ->
-      {:ok, _pid} = NodeSupervisor.start_node(id: n.id, type: n.type)
+      {:ok, _pid} = NodeSupervisor.start_node(user_id, id: n.id, type: n.type)
     end)
 
-    Enum.each(topology.connections, fn [from, to] -> NodeServer.connect(from, to) end)
+    Enum.each(topology.connections, fn [from, to] -> NodeServer.connect(user_id, from, to) end)
 
-    TrafficSimulator.set_topology(topology)
-    Phoenix.PubSub.broadcast(ChaosPlayground.PubSub, "topology", {:topology_changed, topology})
+    TrafficSimulator.set_topology(user_id, topology)
+
+    Phoenix.PubSub.broadcast(
+      ChaosPlayground.PubSub,
+      "topology:#{user_id}",
+      {:topology_changed, topology}
+    )
 
     topology
   end

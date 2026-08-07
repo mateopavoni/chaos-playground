@@ -16,8 +16,8 @@ defmodule ChaosPlayground.Application do
       ChaosPlayground.RateLimit,
       ChaosPlayground.Engine.NodeRegistry,
       ChaosPlayground.Engine.NodeSupervisor,
-      ChaosPlayground.Engine.TrafficSimulator,
-      ChaosPlayground.Engine.ChaosMonkey,
+      ChaosPlayground.Engine.EngineRegistry,
+      ChaosPlayground.Engine.UserEngineSupervisor,
       # Start to serve requests, typically the last entry
       ChaosPlaygroundWeb.Endpoint
     ]

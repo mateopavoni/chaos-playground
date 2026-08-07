@@ -1,35 +1,40 @@
 defmodule ChaosPlayground.Engine.TrafficSimulatorTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
-  alias ChaosPlayground.Engine.{NodeSupervisor, TrafficSimulator}
+  alias ChaosPlayground.Engine.{NodeSupervisor, TrafficSimulator, UserEngineSupervisor}
 
   setup do
+    user_id = System.unique_integer([:positive])
     entry = "lb-#{System.unique_integer([:positive])}"
     api = "api-#{System.unique_integer([:positive])}"
-    {:ok, _} = NodeSupervisor.start_node(id: entry, type: :load_balancer)
-    {:ok, _} = NodeSupervisor.start_node(id: api, type: :api_server)
+    :ok = UserEngineSupervisor.ensure_started(user_id)
+    {:ok, _} = NodeSupervisor.start_node(user_id, id: entry, type: :load_balancer)
+    {:ok, _} = NodeSupervisor.start_node(user_id, id: api, type: :api_server)
 
-    ChaosPlayground.Engine.NodeServer.connect(entry, api)
+    ChaosPlayground.Engine.NodeServer.connect(user_id, entry, api)
     Process.sleep(10)
 
-    Phoenix.PubSub.subscribe(ChaosPlayground.PubSub, "metrics")
+    Phoenix.PubSub.subscribe(ChaosPlayground.PubSub, "metrics:#{user_id}")
 
-    on_exit(fn -> TrafficSimulator.pause_traffic() end)
+    on_exit(fn -> TrafficSimulator.pause_traffic(user_id) end)
 
-    %{entry: entry, api: api}
+    %{user_id: user_id, entry: entry, api: api}
   end
 
-  test "routes generated packets through connected nodes and broadcasts results", %{entry: entry} do
-    TrafficSimulator.set_entry_node(entry)
-    TrafficSimulator.set_rps(50)
-    TrafficSimulator.start_traffic()
+  test "routes generated packets through connected nodes and broadcasts results", %{
+    user_id: user_id,
+    entry: entry
+  } do
+    TrafficSimulator.set_entry_node(user_id, entry)
+    TrafficSimulator.set_rps(user_id, 50)
+    TrafficSimulator.start_traffic(user_id)
 
     assert_receive {:packet_result, %{status: :success}}, 1_000
   end
 
-  test "does not generate traffic while paused" do
-    TrafficSimulator.set_entry_node("unused")
-    TrafficSimulator.pause_traffic()
+  test "does not generate traffic while paused", %{user_id: user_id} do
+    TrafficSimulator.set_entry_node(user_id, "unused")
+    TrafficSimulator.pause_traffic(user_id)
 
     refute_receive {:packet_result, _}, 300
   end

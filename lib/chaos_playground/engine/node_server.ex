@@ -8,11 +8,12 @@ defmodule ChaosPlayground.Engine.NodeServer do
 
   alias ChaosPlayground.Engine.NodeRegistry
 
-  defstruct [:id, :type, :status, :latency_ms, :failure_rate, :connections]
+  defstruct [:id, :user_id, :type, :status, :latency_ms, :failure_rate, :connections]
 
   @type status :: :healthy | :degraded | :dead
   @type t :: %__MODULE__{
           id: String.t(),
+          user_id: term(),
           type: atom(),
           status: status(),
           latency_ms: non_neg_integer(),
@@ -23,52 +24,55 @@ defmodule ChaosPlayground.Engine.NodeServer do
   # Client API
 
   def start_link(attrs) do
+    user_id = Keyword.fetch!(attrs, :user_id)
     id = Keyword.fetch!(attrs, :id)
-    GenServer.start_link(__MODULE__, attrs, name: NodeRegistry.via_tuple(id))
+    GenServer.start_link(__MODULE__, attrs, name: NodeRegistry.via_tuple(user_id, id))
   end
 
   # ponytail: restart :temporary — un nodo "matado" queda muerto hasta que algo
   # vuelva a pedir start_node/1 con el mismo id (revivir es una acción explícita,
   # no magia del supervisor). Subir a :transient el día que haga falta auto-heal.
   def child_spec(attrs) do
+    user_id = Keyword.fetch!(attrs, :user_id)
     id = Keyword.fetch!(attrs, :id)
 
     %{
-      id: {__MODULE__, id},
+      id: {__MODULE__, user_id, id},
       start: {__MODULE__, :start_link, [attrs]},
       restart: :temporary
     }
   end
 
-  @spec get_state(String.t()) :: t() | {:error, :not_found}
-  def get_state(id), do: call(id, :get_state)
+  @spec get_state(term(), String.t()) :: t() | {:error, :not_found}
+  def get_state(user_id, id), do: call(user_id, id, :get_state)
 
   # ponytail: Process.exit(pid, :kill) en NodeSupervisor.kill_node no dispara terminate/2,
   # asi que sin esto solo el browser que pidio el kill se enteraba (update optimista local) —
-  # el resto de los visitantes del canvas compartido nunca veia el nodo caer.
-  @spec mark_dead(String.t()) :: t() | {:error, :not_found}
-  def mark_dead(id), do: call(id, :mark_dead)
+  # el resto de las pestañas del mismo usuario nunca veian el nodo caer.
+  @spec mark_dead(term(), String.t()) :: t() | {:error, :not_found}
+  def mark_dead(user_id, id), do: call(user_id, id, :mark_dead)
 
-  @spec handle_packet(String.t(), map()) :: {:ok, map()} | {:error, atom()}
-  def handle_packet(id, packet), do: call(id, {:handle_packet, packet})
+  @spec handle_packet(term(), String.t(), map()) :: {:ok, map()} | {:error, atom()}
+  def handle_packet(user_id, id, packet), do: call(user_id, id, {:handle_packet, packet})
 
-  def set_latency(id, ms) when is_integer(ms) and ms >= 0, do: cast(id, {:set_latency, ms})
+  def set_latency(user_id, id, ms) when is_integer(ms) and ms >= 0,
+    do: cast(user_id, id, {:set_latency, ms})
 
-  def set_failure_rate(id, rate) when is_float(rate) and rate >= 0.0 and rate <= 1.0,
-    do: cast(id, {:set_failure_rate, rate})
+  def set_failure_rate(user_id, id, rate) when is_float(rate) and rate >= 0.0 and rate <= 1.0,
+    do: cast(user_id, id, {:set_failure_rate, rate})
 
-  def connect(id, other_id), do: cast(id, {:connect, other_id})
-  def disconnect(id, other_id), do: cast(id, {:disconnect, other_id})
+  def connect(user_id, id, other_id), do: cast(user_id, id, {:connect, other_id})
+  def disconnect(user_id, id, other_id), do: cast(user_id, id, {:disconnect, other_id})
 
-  defp call(id, msg) do
-    case NodeRegistry.whereis(id) do
+  defp call(user_id, id, msg) do
+    case NodeRegistry.whereis(user_id, id) do
       nil -> {:error, :not_found}
       pid -> GenServer.call(pid, msg)
     end
   end
 
-  defp cast(id, msg) do
-    case NodeRegistry.whereis(id) do
+  defp cast(user_id, id, msg) do
+    case NodeRegistry.whereis(user_id, id) do
       nil -> {:error, :not_found}
       pid -> GenServer.cast(pid, msg)
     end
@@ -80,6 +84,7 @@ defmodule ChaosPlayground.Engine.NodeServer do
   def init(attrs) do
     state = %__MODULE__{
       id: Keyword.fetch!(attrs, :id),
+      user_id: Keyword.fetch!(attrs, :user_id),
       type: Keyword.fetch!(attrs, :type),
       status: :healthy,
       latency_ms: Keyword.get(attrs, :latency_ms, 0),
@@ -140,6 +145,10 @@ defmodule ChaosPlayground.Engine.NodeServer do
   end
 
   defp broadcast(state) do
-    Phoenix.PubSub.broadcast(ChaosPlayground.PubSub, "nodes", {:node_updated, state})
+    Phoenix.PubSub.broadcast(
+      ChaosPlayground.PubSub,
+      "nodes:#{state.user_id}",
+      {:node_updated, state}
+    )
   end
 end
