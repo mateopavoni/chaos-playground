@@ -38,4 +38,12 @@ defmodule ChaosPlayground.Engine.TrafficSimulatorTest do
 
     refute_receive {:packet_result, _}, 300
   end
+
+  test "set_rps clamps above the 200 rps hard cap server-side, even bypassing the UI's max=\"200\"",
+       %{user_id: user_id} do
+    TrafficSimulator.set_rps(user_id, 999_999)
+
+    # get_state is a synchronous call, so it serializes after the async set_rps cast above.
+    assert TrafficSimulator.get_state(user_id).rps == 200
+  end
 end

@@ -110,7 +110,23 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
 
   # get_connect_info solo se puede leer durante mount/3, no desde handle_event —
   # por eso la IP se captura una vez al montar y se guarda en assigns.
+  #
+  # :peer_data es el peer TCP crudo del socket WS — detrás del reverse proxy de Dokku
+  # eso es siempre la IP del proxy, la misma para todos los clientes (el pipeline de
+  # plugs del Endpoint, donde vive `plug RemoteIp`, no corre para el upgrade de
+  # WebSocket, así que su reescritura de conn.remote_ip nunca llega acá). Por eso se
+  # resuelve la IP real a mano con RemoteIp.from/1 sobre los :x_headers crudos
+  # (X-Forwarded-For), con :peer_data como fallback para dev/tests sin proxy delante.
   defp peer_ip(socket) do
+    x_headers = get_connect_info(socket, :x_headers) || []
+
+    case RemoteIp.from(x_headers) do
+      ip when is_tuple(ip) -> ip |> :inet.ntoa() |> to_string()
+      nil -> peer_data_ip(socket)
+    end
+  end
+
+  defp peer_data_ip(socket) do
     case get_connect_info(socket, :peer_data) do
       %{address: address} -> address |> :inet.ntoa() |> to_string()
       _ -> "unknown"

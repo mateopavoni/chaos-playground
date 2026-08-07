@@ -14,6 +14,11 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
   # desacoplada de la latencia simulada del nodo (esa ya se aplicó como delay real antes
   # de este hop). Subir a un cálculo dinámico si algún día importa que se vea "realista".
   @hop_animation_ms 350
+  # Tope duro server-side — coincide con el max="200" del slider en la UI, pero se aplica
+  # acá adentro (no solo en la LiveView) para que no se pueda esquivar empujando el evento
+  # set_rps directamente por el socket con un valor arbitrario y ahogar el BEAM compartido
+  # con cientos de miles de Tasks/seg (packets_per_tick(rps) por cada tick de 200ms).
+  @max_rps 200
 
   defstruct user_id: nil, running?: false, rps: 5, entry_node: nil, topology: nil
 
@@ -50,7 +55,7 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
   @impl true
   def handle_cast(:start, state), do: {:noreply, %{state | running?: true}}
   def handle_cast(:pause, state), do: {:noreply, %{state | running?: false}}
-  def handle_cast({:set_rps, rps}, state), do: {:noreply, %{state | rps: rps}}
+  def handle_cast({:set_rps, rps}, state), do: {:noreply, %{state | rps: min(rps, @max_rps)}}
 
   def handle_cast({:set_entry_node, node_id}, state),
     do: {:noreply, %{state | entry_node: node_id}}

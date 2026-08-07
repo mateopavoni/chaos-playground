@@ -11,9 +11,25 @@ defmodule ChaosPlaygroundWeb.Endpoint do
     same_site: "Lax"
   ]
 
+  # :x_headers (X-Forwarded-For crudo) además de :peer_data — el socket WS no pasa por
+  # el pipeline de plugs de abajo (el RemoteIp de ahí nunca corre para el upgrade de
+  # WebSocket), así que quien necesite la IP real del cliente en una LiveView (ver
+  # UserLive.Registration.peer_ip/1) tiene que resolverla a mano con
+  # RemoteIp.from(x_headers) en vez de confiar en peer_data (que es el peer TCP crudo,
+  # es decir el proxy, no el cliente).
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [:peer_data, session: @session_options]],
-    longpoll: [connect_info: [:peer_data, session: @session_options]]
+    websocket: [connect_info: [:peer_data, :x_headers, session: @session_options]],
+    longpoll: [connect_info: [:peer_data, :x_headers, session: @session_options]]
+
+  # Reescribe conn.remote_ip a partir de X-Forwarded-For/Forwarded cuando el request
+  # llega de un salto conocido (loopback/redes privadas — el default de RemoteIp cuando
+  # no se configuran :proxies explícitos, que es exactamente la topología de este deploy:
+  # un solo host Dokku con nginx como reverse proxy delante de la app). Sin esto,
+  # conn.remote_ip es siempre la IP del proxy — el mismo valor para todos los clientes —
+  # y los rate limiters por IP (RateLimitAuth) terminan compartiendo un balde único.
+  # Tiene que ir temprano en el pipeline, antes del Router (que es donde se lee
+  # conn.remote_ip más abajo, en el pipeline :rate_limit_auth).
+  plug RemoteIp
 
   # Serve at "/" the static files from "priv/static" directory.
   #

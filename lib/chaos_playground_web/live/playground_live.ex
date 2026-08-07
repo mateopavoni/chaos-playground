@@ -17,6 +17,10 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   @metrics_tick_ms 500
   @metrics_window_ms 2_000
   @history_max 40
+  # Mismo tope que TrafficSimulator.set_rps/2 — se clampea acá también para que el
+  # assign :rps (lo que ve el slider) no muestre un valor mayor al que el engine
+  # terminó aplicando de verdad.
+  @max_rps 200
 
   @impl true
   def mount(params, _session, socket) do
@@ -141,9 +145,18 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   end
 
   def handle_event("set_rps", %{"rps" => rps}, socket) do
-    rps = String.to_integer(rps)
-    TrafficSimulator.set_rps(socket.assigns.user_id, rps)
-    {:noreply, assign(socket, :rps, rps)}
+    # Integer.parse en vez de String.to_integer: un evento LiveView puede empujarse
+    # directo por el socket con lo que sea, no solo con lo que manda el <input>.
+    # Valor inválido (no numérico o negativo) => se ignora el evento en vez de crashear.
+    case Integer.parse(rps) do
+      {rps, _rest} when rps >= 0 ->
+        rps = min(rps, @max_rps)
+        TrafficSimulator.set_rps(socket.assigns.user_id, rps)
+        {:noreply, assign(socket, :rps, rps)}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("set_entry_node", %{"entry_node" => id}, socket) do
@@ -253,13 +266,25 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   end
 
   def handle_event("set_latency", %{"node_id" => id, "value" => value}, socket) do
-    NodeServer.set_latency(socket.assigns.user_id, id, String.to_integer(value))
+    # Integer.parse: mismo motivo que en set_rps — un valor negativo o no numérico
+    # rompería el guard de NodeServer.set_latency/3 (crash), así que se valida antes.
+    case Integer.parse(value) do
+      {ms, _rest} when ms >= 0 -> NodeServer.set_latency(socket.assigns.user_id, id, ms)
+      _ -> :ok
+    end
+
     {:noreply, socket}
   end
 
   def handle_event("set_failure_rate", %{"node_id" => id, "value" => value}, socket) do
-    {rate, _} = Float.parse(value)
-    NodeServer.set_failure_rate(socket.assigns.user_id, id, rate)
+    case Float.parse(value) do
+      {rate, _rest} when rate >= 0.0 and rate <= 1.0 ->
+        NodeServer.set_failure_rate(socket.assigns.user_id, id, rate)
+
+      _ ->
+        :ok
+    end
+
     {:noreply, socket}
   end
 
