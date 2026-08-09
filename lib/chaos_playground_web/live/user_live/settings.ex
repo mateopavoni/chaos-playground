@@ -9,7 +9,11 @@ defmodule ChaosPlaygroundWeb.UserLive.Settings do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
-      <div class="text-center">
+      <.link navigate={~p"/"} class="inline-flex items-center gap-1 text-sm opacity-70 hover:opacity-100">
+        <.icon name="hero-arrow-left" class="size-4" /> Volver al canvas
+      </.link>
+
+      <div class="text-center mt-4">
         <.header>
           Tu cuenta
           <:subtitle>Cambiá tu contraseña</:subtitle>

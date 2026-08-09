@@ -6,6 +6,10 @@ defmodule ChaosPlaygroundWeb.UserLive.Login do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="mx-auto max-w-sm space-y-4">
+        <.link navigate={~p"/"} class="inline-flex items-center gap-1 text-sm opacity-70 hover:opacity-100">
+          <.icon name="hero-arrow-left" class="size-4" /> Volver al canvas
+        </.link>
+
         <div class="text-center">
           <.header>
             <p>Iniciar sesión</p>

@@ -24,6 +24,11 @@ config :chaos_playground,
   ecto_repos: [ChaosPlayground.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# App is Spanish-only, sin selector de idioma — todos los mensajes de error
+# de Ecto (unique_constraint, validate_length, etc.) salen en inglés si esto
+# no está seteado, porque Gettext cae al locale "en" por default.
+config :chaos_playground, ChaosPlaygroundWeb.Gettext, default_locale: "es"
+
 # Configure the endpoint
 config :chaos_playground, ChaosPlaygroundWeb.Endpoint,
   url: [host: "localhost"],
