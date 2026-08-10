@@ -9,7 +9,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="mx-auto max-w-sm space-y-4">
-        <.link navigate={~p"/"} class="inline-flex items-center gap-1 text-sm opacity-70 hover:opacity-100">
+        <.link navigate={~p"/"} class="btn btn-ghost btn-sm -ml-2 gap-1">
           <.icon name="hero-arrow-left" class="size-4" /> Volver al canvas
         </.link>
 

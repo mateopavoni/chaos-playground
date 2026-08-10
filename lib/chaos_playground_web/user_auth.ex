@@ -284,4 +284,16 @@ defmodule ChaosPlaygroundWeb.UserAuth do
   end
 
   defp maybe_store_return_to(conn), do: conn
+
+  @doc """
+  Plug that assigns a stable random id to anonymous visitors, so their canvas
+  process (keyed by this id) stays the same across requests until they log in.
+  """
+  def ensure_guest_id(conn, _opts) do
+    cond do
+      conn.assigns.current_scope && conn.assigns.current_scope.user -> conn
+      get_session(conn, :guest_id) -> conn
+      true -> put_session(conn, :guest_id, Ecto.UUID.generate())
+    end
+  end
 end

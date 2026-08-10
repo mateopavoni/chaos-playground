@@ -23,8 +23,8 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   @max_rps 200
 
   @impl true
-  def mount(params, _session, socket) do
-    user_id = socket.assigns.current_scope.user.id
+  def mount(params, session, socket) do
+    user_id = user_id(socket.assigns.current_scope, session)
     presence_topic = presence_topic(user_id)
 
     # Se llama sin conexión (render estático inicial) y de nuevo conectado (WS) —
@@ -61,11 +61,17 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
       |> assign(:metrics, %{rps: 0, p99_ms: 0, error_rate: 0.0})
       |> assign(:metrics_history, [])
       |> assign(:builtin_presets, Presets.list())
-      |> assign(:saved_presets, Topologies.list_saved(socket.assigns.current_scope))
+      |> assign(:saved_presets, saved_presets(socket.assigns.current_scope))
       |> assign(:selected, nil)
 
     {:ok, socket}
   end
+
+  defp user_id(%{user: %{id: id}}, _session), do: id
+  defp user_id(_scope, session), do: session["guest_id"]
+
+  defp saved_presets(%{user: %{}} = scope), do: Topologies.list_saved(scope)
+  defp saved_presets(_scope), do: []
 
   defp presence_topic(user_id), do: "playground:visitors:#{user_id}"
 
@@ -176,6 +182,10 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
     {:noreply, socket}
   end
 
+  def handle_event("load_saved", _params, %{assigns: %{current_scope: nil}} = socket) do
+    {:noreply, require_login(socket)}
+  end
+
   def handle_event("load_saved", %{"id" => id}, socket) do
     case Topologies.get(socket.assigns.current_scope, id) do
       {:ok, saved} ->
@@ -192,6 +202,10 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "Preset no encontrado")}
     end
+  end
+
+  def handle_event("save_topology", _params, %{assigns: %{current_scope: nil}} = socket) do
+    {:noreply, require_login(socket)}
   end
 
   def handle_event("save_topology", %{"name" => name}, socket) do
@@ -423,6 +437,12 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
         {:noreply,
          put_flash(socket, :error, "No se pudo guardar: #{changeset_summary(changeset)}")}
     end
+  end
+
+  defp require_login(socket) do
+    socket
+    |> put_flash(:error, "Iniciá sesión para guardar presets")
+    |> push_navigate(to: ~p"/users/log-in")
   end
 
   defp under_save_rate_limit?(scope) do

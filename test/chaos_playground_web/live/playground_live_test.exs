@@ -73,4 +73,28 @@ defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
 
     assert html =~ "db-replica"
   end
+
+  describe "anonymous visitor" do
+    setup do
+      %{conn: Phoenix.ConnTest.build_conn()}
+    end
+
+    test "can use the canvas without logging in", %{conn: conn} do
+      {:ok, view, html} = live(conn, "/")
+
+      assert html =~ "Chaos Playground"
+      refute html =~ "Iniciá sesión para acceder"
+
+      html = view |> element("button", "Iniciar") |> render_click()
+      assert has_element?(view, "button[disabled]", "Iniciar")
+      assert html =~ "Chaos Playground"
+    end
+
+    test "trying to save a preset redirects to login instead of crashing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      {:error, {:live_redirect, %{to: "/users/log-in"}}} =
+        view |> form("form[phx-submit='save_topology']", %{"name" => "x"}) |> render_submit()
+    end
+  end
 end

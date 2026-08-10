@@ -11,6 +11,7 @@ defmodule ChaosPlaygroundWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_scope_for_user
+    plug :ensure_guest_id
   end
 
   pipeline :rate_limit_auth do
@@ -50,7 +51,6 @@ defmodule ChaosPlaygroundWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [{ChaosPlaygroundWeb.UserAuth, :require_authenticated}] do
       live "/users/settings", UserLive.Settings, :edit
-      live "/", PlaygroundLive
     end
 
     post "/users/update-password", UserSessionController, :update_password
@@ -61,6 +61,7 @@ defmodule ChaosPlaygroundWeb.Router do
 
     live_session :current_user,
       on_mount: [{ChaosPlaygroundWeb.UserAuth, :mount_current_scope}] do
+      live "/", PlaygroundLive
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
     end
