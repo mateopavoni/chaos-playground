@@ -137,7 +137,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
     end
   end
 
-  # ponytail: rate limit de registro vive en la LiveView (no hay ruta POST propia,
+  # rate limit de registro vive en la LiveView (no hay ruta POST propia,
   # el "submit" real que existe es el de /users/log-in vía phx-trigger-action).
   defp under_registration_rate_limit?(socket) do
     match?(

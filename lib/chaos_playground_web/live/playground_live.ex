@@ -40,7 +40,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
       maybe_apply_preset_param(user_id, params["preset"])
     end
 
-    # ponytail: buffer de paquetes crudos en el process dictionary, no en assigns —
+    # buffer de paquetes crudos en el process dictionary, no en assigns —
     # a RPS alto no queremos un re-render por paquete, solo cada @metrics_tick_ms.
     Process.put(:metrics_buffer, [])
 

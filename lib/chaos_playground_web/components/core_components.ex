@@ -86,7 +86,7 @@ defmodule ChaosPlaygroundWeb.CoreComponents do
       <script :type={Phoenix.LiveView.ColocatedHook} name=".FlashAutoHide">
         export default {
           mounted() {
-            // ponytail: 6s fijo, sube a config si algun dia hace falta variar por kind
+            // 6s fijo, sube a config si algun dia hace falta variar por kind
             this.timer = setTimeout(() => {
               this.js().exec(this.el.getAttribute("phx-click"));
             }, 6000);

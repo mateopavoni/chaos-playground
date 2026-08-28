@@ -10,7 +10,7 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
   alias ChaosPlayground.Engine.{EngineRegistry, NodeServer}
 
   @tick_ms 200
-  # ponytail: duración fija de la animación de un paquete viajando entre dos nodos —
+  # duración fija de la animación de un paquete viajando entre dos nodos —
   # desacoplada de la latencia simulada del nodo (esa ya se aplicó como delay real antes
   # de este hop). Subir a un cálculo dinámico si algún día importa que se vea "realista".
   @hop_animation_ms 350
@@ -78,7 +78,7 @@ defmodule ChaosPlayground.Engine.TrafficSimulator do
   defp spawn_packets(_user_id, _entry_node, 0), do: :ok
 
   defp spawn_packets(user_id, entry_node, count) do
-    # ponytail: separa el arranque de cada paquete a lo largo de la ventana del tick
+    # separa el arranque de cada paquete a lo largo de la ventana del tick
     # (en vez de lanzarlos todos en el mismo instante) para que dos paquetes en el
     # mismo camino no queden perfectamente superpuestos en el canvas — a RPS alto se
     # ven muchos mas puntos en vez de un solo punto "grueso".

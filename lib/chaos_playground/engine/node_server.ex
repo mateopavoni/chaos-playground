@@ -29,7 +29,7 @@ defmodule ChaosPlayground.Engine.NodeServer do
     GenServer.start_link(__MODULE__, attrs, name: NodeRegistry.via_tuple(user_id, id))
   end
 
-  # ponytail: restart :temporary — un nodo "matado" queda muerto hasta que algo
+  # restart :temporary — un nodo "matado" queda muerto hasta que algo
   # vuelva a pedir start_node/1 con el mismo id (revivir es una acción explícita,
   # no magia del supervisor). Subir a :transient el día que haga falta auto-heal.
   def child_spec(attrs) do
@@ -46,7 +46,7 @@ defmodule ChaosPlayground.Engine.NodeServer do
   @spec get_state(term(), String.t()) :: t() | {:error, :not_found}
   def get_state(user_id, id), do: call(user_id, id, :get_state)
 
-  # ponytail: Process.exit(pid, :kill) en NodeSupervisor.kill_node no dispara terminate/2,
+  # Process.exit(pid, :kill) en NodeSupervisor.kill_node no dispara terminate/2,
   # asi que sin esto solo el browser que pidio el kill se enteraba (update optimista local) —
   # el resto de las pestañas del mismo usuario nunca veian el nodo caer.
   @spec mark_dead(term(), String.t()) :: t() | {:error, :not_found}
