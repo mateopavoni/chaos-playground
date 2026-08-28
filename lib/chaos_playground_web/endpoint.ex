@@ -4,11 +4,15 @@ defmodule ChaosPlaygroundWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  # secure: true en prod (siempre servido por HTTPS, ver runtime.exs) — en dev queda en
+  # false porque mix phx.server corre sobre http://localhost y una cookie secure ahí
+  # nunca la manda el navegador, rompiendo la sesión local.
   @session_options [
     store: :cookie,
     key: "_chaos_playground_key",
     signing_salt: "rIg04Ir+",
-    same_site: "Lax"
+    same_site: "Lax",
+    secure: Mix.env() == :prod
   ]
 
   # :x_headers (X-Forwarded-For crudo) además de :peer_data — el socket WS no pasa por

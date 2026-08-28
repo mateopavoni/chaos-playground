@@ -9,7 +9,12 @@ defmodule ChaosPlaygroundWeb.Router do
     plug :fetch_live_flash
     plug :put_root_layout, html: {ChaosPlaygroundWeb.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
+
+    plug :put_secure_browser_headers, %{
+      "content-security-policy" =>
+        "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; script-src 'self'; style-src 'self'; frame-ancestors 'self'"
+    }
+
     plug :fetch_current_scope_for_user
     plug :ensure_guest_id
   end
