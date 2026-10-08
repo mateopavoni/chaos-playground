@@ -10,76 +10,10 @@
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SCRGDTW4EZ">
-    </script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-SCRGDTW4EZ');
-    </script>
-    <meta name="google-site-verification" content="kS2OowMtMii8a4e-Sr7V40WnYrUoSFhGOBIAfUzp5bk" />
-    <script>
-      (() => {
-        const systemTheme = () => matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-
-        const setTheme = (theme) => {
-          if (theme === "system") {
-            localStorage.removeItem("phx:theme");
-            document.documentElement.setAttribute("data-theme", systemTheme());
-            document.documentElement.setAttribute("data-theme-source", "system");
-          } else {
-            localStorage.setItem("phx:theme", theme);
-            document.documentElement.setAttribute("data-theme", theme);
-            document.documentElement.setAttribute("data-theme-source", "user");
-          }
-        };
-        if (!document.documentElement.hasAttribute("data-theme")) {
-          setTheme(localStorage.getItem("phx:theme") || "dark");
-        }
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
-
-        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-          if (document.documentElement.getAttribute("data-theme-source") === "system") {
-            document.documentElement.setAttribute("data-theme", systemTheme());
-          }
-        });
-      })();
+    <script src={~p"/theme.js"}>
     </script>
   </head>
   <body>
     {@inner_content}
-    <script>
-      (() => {
-        document.addEventListener("click", (e) => {
-          const btn = e.target.closest("#theme-toggle");
-          if (!btn) return;
-
-          const current = document.documentElement.getAttribute("data-theme");
-          const next = current === "dark" ? "light" : "dark";
-          const apply = () => {
-            btn.dataset.phxTheme = next;
-            btn.dispatchEvent(new CustomEvent("phx:set-theme", { bubbles: true }));
-          };
-
-          if (!document.startViewTransition) {
-            apply();
-            return;
-          }
-
-          const { clientX: x, clientY: y } = e;
-          const radius = Math.hypot(
-            Math.max(x, innerWidth - x),
-            Math.max(y, innerHeight - y),
-          );
-          const root = document.documentElement.style;
-          root.setProperty("--theme-toggle-x", `${x}px`);
-          root.setProperty("--theme-toggle-y", `${y}px`);
-          root.setProperty("--theme-toggle-radius", `${radius}px`);
-          document.startViewTransition(apply);
-        });
-      })();
-    </script>
   </body>
 </html>

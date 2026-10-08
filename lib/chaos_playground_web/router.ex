@@ -13,9 +13,9 @@ defmodule ChaosPlaygroundWeb.Router do
     plug :put_secure_browser_headers, %{
       "content-security-policy" =>
         "default-src 'self'; " <>
-          "connect-src 'self' ws: wss: https://www.google-analytics.com https://*.google-analytics.com; " <>
-          "img-src 'self' data: https://www.google-analytics.com; " <>
-          "script-src 'self' https://www.googletagmanager.com; " <>
+          "connect-src 'self' ws: wss:; " <>
+          "img-src 'self' data:; " <>
+          "script-src 'self'; " <>
           "style-src 'self'; frame-ancestors 'self'"
     }
 
