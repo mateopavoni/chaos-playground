@@ -1,7 +1,0 @@
-{
-  "scripts": {
-    "dokku": {
-      "predeploy": "/app/bin/chaos_playground eval \"ChaosPlayground.Release.migrate()\""
-    }
-  }
-}
