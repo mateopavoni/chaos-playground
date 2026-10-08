@@ -14,10 +14,13 @@ Application
 ├── ChaosPlayground.Engine.NodeRegistry     (Registry — direccionamiento por id de nodo)
 ├── ChaosPlayground.Engine.NodeSupervisor   (DynamicSupervisor — un NodeServer por nodo del canvas)
 │     └── ChaosPlayground.Engine.NodeServer (GenServer, uno por nodo: id/type/status/latency/failure_rate/connections)
-├── ChaosPlayground.Engine.TrafficSimulator (GenServer — singleton: topología activa, tick loop, RPS/entry_node)
-├── Phoenix.PubSub                          (topics: "nodes", "packets", "metrics", "topology")
+├── ChaosPlayground.Engine.EngineRegistry   (Registry — TrafficSimulator y ChaosMonkey por usuario)
+├── ChaosPlayground.Engine.UserEngineSupervisor (DynamicSupervisor — por usuario/invitado: TrafficSimulator + ChaosMonkey, arrancados en el primer mount)
+│     ├── ChaosPlayground.Engine.TrafficSimulator (GenServer — topología activa, tick loop, RPS/entry_node)
+│     └── ChaosPlayground.Engine.ChaosMonkey      (GenServer — mata un nodo vivo al azar cada 6s si está prendido)
+├── Phoenix.PubSub                          (topics por usuario: "nodes:<id>", "packets:<id>", "metrics:<id>", "topology:<id>")
 └── ChaosPlaygroundWeb.Endpoint
-      └── ChaosPlaygroundWeb.PlaygroundLive (un proceso por pestaña de browser — todas comparten el engine)
+      └── ChaosPlaygroundWeb.PlaygroundLive (un proceso por pestaña — las pestañas del mismo usuario comparten su engine)
 ```
 
 ## Por qué este diseño
@@ -30,12 +33,13 @@ Application
   *muestre* el estado roto en vez de que OTP lo tape con auto-heal invisible.
 - **`Registry` en vez de guardar PIDs a mano.** Un `NodeServer` puede reiniciarse y cambiar de PID; el
   resto del sistema lo direcciona siempre por `id` vía `{:via, Registry, {NodeRegistry, id}}`.
-- **Estado global compartido, no por sesión.** `TrafficSimulator` guarda la topología activa (una sola,
-  compartida por todos los browsers conectados) — es lo que hace que dos pestañas viendo el playground
-  vean *el mismo* canvas en tiempo real: cambios de topología se re-broadcastean por el topic "topology"
-  y cada `PlaygroundLive` (incluido el que originó el cambio) reacciona al mensaje, no a un assign local.
-  Trade-off consciente: no hay aislamiento multi-usuario — es un playground de una sola sesión compartida,
-  no una app multi-tenant.
+- **Un engine por usuario (o por invitado), no uno global.** Desde el commit `f1d6998` cada usuario logueado
+  —o cada cookie de invitado (`guest_id`, ver `UserAuth.ensure_guest_id/2`)— tiene su propio
+  `TrafficSimulator` + `ChaosMonkey` y sus propios `NodeServer`, todos direccionados por `{user_id, id}` en
+  los `Registry`. Matar un nodo en tu canvas no afecta a nadie más. Las pestañas del mismo usuario sí ven el
+  mismo canvas en tiempo real: los cambios se re-broadcastean por los topics `*:<user_id>` y cada
+  `PlaygroundLive` reacciona al mensaje, no a un assign local. Trade-off consciente: aislamiento a costa de
+  procesos que nadie reclama (ver `.ai/context/KNOWN_ISSUES.md`: no hay limpieza al desconectarse).
 - **Conexiones viven en `NodeServer.connections`, no duplicadas en la topología.** El layout (x/y por
   nodo) es fijo por preset, pero el cableado real (qué nodo conecta con cuál) es el que cada `NodeServer`
   reporta en su propio estado — así "conectar por drag" y "eliminar conexión" son un solo

@@ -7,16 +7,16 @@
 > `DynamicSupervisor`; matar un nodo desde la UI es literalmente `Process.exit(pid, :kill)` sobre
 > ese proceso, verificable leyendo el motor OTP, no solo prometido en este README.
 
-[![demo](https://img.shields.io/badge/demo-live-brightgreen)](https://chaos-playground.mateopavoni.com.ar/)
+![estado](https://img.shields.io/badge/estado-archivado-lightgrey)
 ![stack](https://img.shields.io/badge/stack-Elixir%20%C2%B7%20Phoenix%20LiveView%20%C2%B7%20PostgreSQL-2b2b2b)
 ![license](https://img.shields.io/badge/license-proprietary-red)
 
-Stack: Elixir + Phoenix LiveView + PostgreSQL + Tailwind, un solo servicio, deployado con **Dokku**.
+Stack: Elixir + Phoenix LiveView + PostgreSQL + Tailwind, un solo servicio. Se corre completo con `docker compose up`.
 
-**Demo:** [`chaos-playground.mateopavoni.com.ar`](https://chaos-playground.mateopavoni.com.ar/) — sin
-cuenta, sin instalar nada. Al entrar hay una demo guiada de 30s (botón en el panel de Tráfico) que
-arma una topología, genera tráfico y mata un nodo en vivo, sola. Login opcional solo para guardar
-tus propias topologías; el canvas y el chaos engineering no lo piden.
+> **Estado: archivado.** La demo pública fue dada de baja y el proyecto ya no está deployado en ningún lado.
+> Se corre entero en local con `docker compose up` (ver [Cómo correr](#cómo-correr)). Una vez levantado no hace
+> falta cuenta: hay una demo guiada de 45s (botón en el panel de Tráfico) que arma una topología, genera tráfico
+> y mata un nodo en vivo, sola. Login opcional solo para guardar tus propias topologías.
 
 ### Capturas
 | Light | Dark |
@@ -37,8 +37,8 @@ que solo cambia un ícono. Acá no:
    a propósito: un nodo matado se queda muerto hasta que algo pide levantarlo nuevamente — la demo
    *muestra* el estado roto (para enseñar chaos engineering) en vez de un auto-heal invisible que lo
    tape.
-3. **El canvas es un engine global, compartido por todos los visitantes en simultáneo** (no una
-   sesión por pestaña) — un trade-off explícito, ver Limitaciones.
+3. **Cada visitante tiene su propio engine aislado** (por cuenta, o por cookie de invitado si no hay login):
+   matar un nodo en tu canvas no afecta a nadie más. Las pestañas del mismo usuario sí comparten canvas en tiempo real.
 
 ## Features
 - Canvas interactivo de nodos y conexiones (drag-to-connect), con paquetes animados viajando entre
@@ -50,20 +50,19 @@ que solo cambia un ícono. Acá no:
 - **Chaos Monkey**: toggle que mata un nodo vivo al azar cada 6s, sin intervención — chaos
   engineering en piloto automático.
 - Dashboard en vivo: RPS global, latencia p99, tasa de error, con gráfico de las últimas 20s.
-- Contador de visitantes conectados al canvas compartido (`Phoenix.Presence`).
+- Contador de pestañas conectadas a tu canvas (`Phoenix.Presence`).
 - Presets de arquitectura pre-armados (con link directo por `?preset=`) y guardado de topologías
   propias en Postgres, con cuenta opcional.
-- Demo guiada de 30s que resetea el canvas a un estado limpio antes de arrancar, sin importar qué
-  había activado antes (Chaos Monkey, tráfico corriendo, nodos muertos de otra sesión).
+- Demo guiada de 45s que resetea el canvas a un estado limpio antes de arrancar, sin importar qué
+  había activado antes (Chaos Monkey, tráfico corriendo, nodos muertos).
 
 ### En números
 | | |
 |---|---|
-| Tests | **101**, `mix test` corriendo en CI/CD contra cada push a `main` |
+| Tests | **117**, `mix test` (verificado en Docker, 0 fallas) |
 | Rutas | **7** (canvas + registro/login/settings, sin API JSON aparte — todo LiveView) |
 | Motor de tráfico | tick cada **200ms**, un `Task` concurrente por paquete en vuelo |
 | Chaos Monkey | tick cada **6s** |
-| Lighthouse (demo en vivo) | **97** performance / **89** accesibilidad / **96** best practices — ver [Performance](#performance) |
 
 ---
 
@@ -87,7 +86,7 @@ graph TD
   Live <-. broadcast/subscribe .-> PubSub
 ```
 Detalle completo y las decisiones detrás de cada pieza (por qué `restart: :temporary`, por qué el
-engine es global y no por sesión, por qué el context menu se resolvió con click + Inspector) en
+engine es por usuario, por qué el context menu se resolvió con click + Inspector) en
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
@@ -97,37 +96,35 @@ engine es global y no por sesión, por qué el context menu se resolvió con cli
 docker compose up
 ```
 App en http://localhost:4000. Toolchain 100% en Docker (imagen `elixir:1.17` + Postgres 16; el host
-no necesita Elixir instalado). Detalle completo — release de producción, deploy a Dokku — en
+no necesita Elixir instalado). Detalle completo — tests, IEx y solución de problemas — en
 [RUN.md](RUN.md).
 
 ## La demo guiada
-El botón "Demo guiada (30s)" del panel de Tráfico no es un video ni un script grabado: dispara los
+El botón "Demo guiada (45s)" del panel de Tráfico no es un video ni un script grabado: dispara los
 mismos eventos de LiveView que un usuario haría a mano (cargar preset, subir RPS, abrir el Inspector,
 matar un nodo, cambiar la entrada de tráfico) contra el engine real, con callouts que explican cada
 paso. Primer paso siempre: apaga el Chaos Monkey si estaba prendido y recarga una topología limpia,
-así el recorrido es reproducible sin importar qué había antes en el canvas compartido.
+así el recorrido es reproducible sin importar qué había antes en el canvas.
 
 ## Tests
 ```bash
-docker compose run --rm app mix test
+docker compose run --rm -e MIX_ENV=test app sh -c "mix deps.get && mix test"
 ```
-101 tests: procesos/concurrencia del motor OTP (estado, kill + cleanup de `Registry`, routing con
+117 tests: procesos/concurrencia del motor OTP (estado, kill + cleanup de `Registry`, routing con
 `Task`, pausa/resume), LiveView (`Phoenix.LiveViewTest`: mount, start/pause, kill de nodo, cambio de
-preset), auth y rate limiting. `async: false` a propósito — el engine es un singleton global, no hay
-aislamiento por test. 2 tests son flaky por ese mismo motivo (documentado en `.claude/CLAUDE.md`).
+preset), auth y rate limiting.
 
 ## Limitaciones conocidas
-- **El canvas es un único engine global, compartido por todos los visitantes** — no hay aislamiento
-  por sesión/usuario. Cargar un preset (propio o built-in) cambia lo que ve todo el mundo conectado,
-  logueado o no. Aislar el engine por usuario sería un proyecto aparte.
+- **Un engine por usuario/invitado.** Cada cookie de invitado arranca sus propios procesos OTP. Un `Reaper`
+  los baja a los 5 minutos sin ninguna pestaña conectada (según `Presence`), pero no hay un tope global de
+  engines ni de RPS entre sesiones: antes de exponerlo a internet de nuevo habría que agregarlo. Detalle en
+  `.ai/context/KNOWN_ISSUES.md`.
 - **Sin recuperación de contraseña.** El login no envía email (no hay mailer instalado, a propósito
   — un link de recuperación que nunca llega es peor que no ofrecerlo). Quien pierde su contraseña,
   pierde el acceso a sus presets guardados.
 - **Un nodo matado no revive solo.** `restart: :temporary` en el `DynamicSupervisor` es intencional
   — la demo muestra el estado roto en vez de taparlo con auto-heal invisible. "Reiniciar nodo" es
   siempre una acción manual.
-- **2 tests flaky documentados**, mismo origen (el motor OTP es global, no aislado entre tests): uno
-  de carga de presets y uno de pausa de tráfico.
 
 ## Licencia
 © 2026 Mateo Pavoni. Software propietario, publicado solo con fines de evaluación/portfolio.
