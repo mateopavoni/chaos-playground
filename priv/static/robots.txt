@@ -1,4 +1,2 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://chaos-playground.mateopavoni.com.ar/sitemap.xml
