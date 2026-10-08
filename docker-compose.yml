@@ -1,36 +1,59 @@
+# Entorno local completo: `docker compose up` y abrir http://localhost:4000
+#
+# No hace falta Elixir/Erlang/Node en el host. La primera vez tarda unos minutos
+# (baja deps de Hex y los binarios de tailwind/esbuild); las siguientes arrancan rápido.
+# Los artefactos (deps/, _build/, .home/) quedan en el árbol del proyecto, todos gitignoreados.
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+    # Sin `ports:` a propósito: solo la app (red interna de compose) habla con la DB.
+    # Publicar el 5432 choca con cualquier Postgres local y expone una DB con
+    # credenciales de desarrollo a toda la red.
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 15
 
   app:
     image: elixir:1.17
     working_dir: /app
-    user: "${UID:-1000}:${GID:-1000}"
+    # Mismo UID/GID que tu usuario: los archivos que escribe el contenedor no quedan como root.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     environment:
       HOME: /app/.home
+      MIX_ENV: dev
       DB_HOST: db
       PHX_HOST: localhost
     volumes:
       - .:/app
+    # Solo loopback: el servidor de dev tiene debug_errors y check_origin desactivado,
+    # no debe quedar accesible desde otras máquinas de la red.
     ports:
-      - "4000:4000"
+      - "127.0.0.1:${APP_PORT:-4000}:4000"
     depends_on:
       db:
         condition: service_healthy
     entrypoint: []
-    command: sh -c "mix local.hex --force --if-missing && mix local.rebar --force --if-missing && mix deps.get && mix phx.server"
+    # ecto.setup es idempotente (create + migrate + seeds), así que corre en cada arranque.
+    command: >
+      sh -c "mix local.hex --force --if-missing
+      && mix local.rebar --force --if-missing
+      && mix deps.get
+      && mix assets.setup
+      && mix ecto.setup
+      && mix phx.server"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:4000/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
 
 volumes:
   db_data:
