@@ -24,7 +24,7 @@
 - **Seguridad**: 4 dependencias actualizadas (2 avisos HIGH en Bandit); historial escaneado sin secretos.
 - **Bugs arreglados con tests**: engines de invitados sin limpieza (Reaper), CSP que bloqueaba scripts inline (tema, onboarding, demo guiada), `revive_node` crasheaba, latencia sin tope, handlers que confiaban en ids del cliente. Ver `KNOWN_ISSUES.md`.
 - **Docs**: README, `RUN.md`, `ARCHITECTURE.md` corregidos; esta carpeta `.ai/` creada.
-- Antes de empezar, `main` local estaba 11 commits atrás de `origin/main`; se sincronizó con `git merge --ff-only`. El remoto `dokku` quedó configurado en `.git/config` pero **no hay que hacer fetch/push contra él**: recrea la app en la VPS (ver `OPEN_QUESTIONS.md`).
+- Antes de empezar, `main` local estaba 11 commits atrás de `origin/main`; se sincronizó con `git merge --ff-only`. El remoto `dokku` se eliminó del clon (cualquier fetch/push contra él recreaba la app en la VPS; ver `OPEN_QUESTIONS.md`).
 
 ## Funcionalidad implementada (según el código)
 Canvas con drag-to-connect, 4 presets built-in, tráfico configurable (RPS ≤ 200, latencia, tasa de falla), Chaos Monkey, Inspector, métricas en vivo, demo guiada, registro/login/settings, guardado de topologías propias.
