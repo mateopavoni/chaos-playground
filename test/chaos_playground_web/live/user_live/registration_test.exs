@@ -32,7 +32,7 @@ defmodule ChaosPlaygroundWeb.UserLive.RegistrationTest do
 
       assert result =~ "Crear cuenta"
       assert result =~ "must have the @ sign and no spaces"
-      assert result =~ "should be at least 12 character"
+      assert result =~ "debe tener al menos 12 caracteres"
     end
   end
 
@@ -59,7 +59,7 @@ defmodule ChaosPlaygroundWeb.UserLive.RegistrationTest do
         |> form("#registration_form", user: valid_user_attributes(email: user.email))
         |> render_submit()
 
-      assert result =~ "has already been taken"
+      assert result =~ "ya está en uso"
     end
   end
 

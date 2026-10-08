@@ -39,7 +39,12 @@ defmodule ChaosPlaygroundWeb.Layouts do
       <a href="/" class="font-display text-xl font-semibold tracking-tight hover:text-primary">
         Chaos Playground
       </a>
-      <button id="theme-toggle" type="button" aria-label="Cambiar tema claro/oscuro" class="theme-toggle">
+      <button
+        id="theme-toggle"
+        type="button"
+        aria-label="Cambiar tema claro/oscuro"
+        class="theme-toggle"
+      >
         <.icon name="hero-sun" class="theme-toggle-sun size-5" />
         <.icon name="hero-moon" class="theme-toggle-moon size-5" />
       </button>
@@ -82,8 +87,7 @@ defmodule ChaosPlaygroundWeb.Layouts do
         phx-connected={hide("#client-error") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
-        Reconectando…
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+        Reconectando… <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
 
       <.flash
@@ -97,11 +101,9 @@ defmodule ChaosPlaygroundWeb.Layouts do
         phx-connected={hide("#server-error") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
-        Reconectando…
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+        Reconectando… <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
     </div>
     """
   end
-
 end

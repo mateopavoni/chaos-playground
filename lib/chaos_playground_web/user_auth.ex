@@ -239,7 +239,10 @@ defmodule ChaosPlaygroundWeb.UserAuth do
     else
       socket =
         socket
-        |> Phoenix.LiveView.put_flash(:error, "Necesitás volver a autenticarte para acceder a esta página.")
+        |> Phoenix.LiveView.put_flash(
+          :error,
+          "Necesitás volver a autenticarte para acceder a esta página."
+        )
         |> Phoenix.LiveView.redirect(to: ~p"/users/log-in")
 
       {:halt, socket}

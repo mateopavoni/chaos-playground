@@ -102,8 +102,7 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
           {:noreply, assign_form(socket, changeset)}
       end
     else
-      {:noreply,
-       put_flash(socket, :error, "Demasiados registros desde acá, esperá un momento.")}
+      {:noreply, put_flash(socket, :error, "Demasiados registros desde acá, esperá un momento.")}
     end
   end
 
@@ -169,6 +168,8 @@ defmodule ChaosPlaygroundWeb.UserLive.Registration do
 
     socket
     |> assign(:form, form)
-    |> then(fn s -> if is_nil(trigger_submit), do: s, else: assign(s, :trigger_submit, trigger_submit) end)
+    |> then(fn s ->
+      if is_nil(trigger_submit), do: s, else: assign(s, :trigger_submit, trigger_submit)
+    end)
   end
 end

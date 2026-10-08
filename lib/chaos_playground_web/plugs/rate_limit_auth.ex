@@ -23,7 +23,9 @@ defmodule ChaosPlaygroundWeb.Plugs.RateLimitAuth do
   def call(conn, _opts), do: conn
 
   defp check(conn, rules) do
-    if Enum.all?(rules, fn {key, scale, limit} -> match?({:allow, _}, RateLimit.hit(key, scale, limit)) end) do
+    if Enum.all?(rules, fn {key, scale, limit} ->
+         match?({:allow, _}, RateLimit.hit(key, scale, limit))
+       end) do
       conn
     else
       conn

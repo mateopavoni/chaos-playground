@@ -8,7 +8,9 @@ defmodule ChaosPlayground.Topologies do
   alias ChaosPlayground.Topologies.SavedTopology
 
   def list_saved(%Scope{user: user}) do
-    Repo.all(from t in SavedTopology, where: t.user_id == ^user.id, order_by: [desc: t.inserted_at])
+    Repo.all(
+      from t in SavedTopology, where: t.user_id == ^user.id, order_by: [desc: t.inserted_at]
+    )
   end
 
   def save(%Scope{user: user}, attrs) do

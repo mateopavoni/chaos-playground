@@ -83,7 +83,7 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
         })
 
       assert result =~ "Guardar contraseña"
-      assert result =~ "should be at least 12 character"
+      assert result =~ "debe tener al menos 12 caracteres"
       assert result =~ "no coincide con la contraseña"
     end
 
@@ -101,7 +101,7 @@ defmodule ChaosPlaygroundWeb.UserLive.SettingsTest do
         |> render_submit()
 
       assert result =~ "Guardar contraseña"
-      assert result =~ "should be at least 12 character"
+      assert result =~ "debe tener al menos 12 caracteres"
       assert result =~ "no coincide con la contraseña"
     end
   end
