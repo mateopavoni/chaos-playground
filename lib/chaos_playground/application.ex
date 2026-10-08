@@ -18,6 +18,7 @@ defmodule ChaosPlayground.Application do
       ChaosPlayground.Engine.NodeSupervisor,
       ChaosPlayground.Engine.EngineRegistry,
       ChaosPlayground.Engine.UserEngineSupervisor,
+      ChaosPlayground.Engine.Reaper,
       # Start to serve requests, typically the last entry
       ChaosPlaygroundWeb.Endpoint
     ]

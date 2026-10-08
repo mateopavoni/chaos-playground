@@ -33,6 +33,37 @@ defmodule ChaosPlaygroundWeb.PlaygroundLiveTest do
     refute has_element?(view, "button[disabled]", "Pausar")
   end
 
+  test "reviving a node that is already alive is a no-op, not a crash", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/")
+
+    assert render_hook(view, "revive_node", %{"id" => "monolith-lb"}) =~ "monolith-lb"
+    assert Process.alive?(view.pid)
+  end
+
+  test "events with ids that are not on the canvas are ignored", %{conn: conn, user_id: user_id} do
+    {:ok, view, _html} = live(conn, "/")
+
+    render_hook(view, "kill_node", %{"id" => "ghost"})
+    render_hook(view, "connect_nodes", %{"from" => "monolith-lb", "to" => "ghost"})
+    render_hook(view, "connect_nodes", %{"from" => "ghost", "to" => "monolith-lb"})
+
+    assert Process.alive?(view.pid)
+    refute "ghost" in NodeServer.get_state(user_id, "monolith-lb").connections
+  end
+
+  test "only a load balancer of the current topology can be the traffic entry", %{
+    conn: conn,
+    user_id: user_id
+  } do
+    {:ok, view, _html} = live(conn, "/")
+
+    render_hook(view, "set_entry_node", %{"entry_node" => "monolith-app"})
+    assert TrafficSimulator.get_state(user_id).entry_node == "monolith-lb"
+
+    render_hook(view, "set_entry_node", %{"entry_node" => "micro-lb"})
+    assert TrafficSimulator.get_state(user_id).entry_node == "micro-lb"
+  end
+
   test "killing a node marks it dead and offers revive", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/")
 

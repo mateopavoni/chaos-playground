@@ -73,7 +73,7 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   defp saved_presets(%{user: %{}} = scope), do: Topologies.list_saved(scope)
   defp saved_presets(_scope), do: []
 
-  defp presence_topic(user_id), do: "playground:visitors:#{user_id}"
+  defp presence_topic(user_id), do: Presence.visitors_topic(user_id)
 
   defp pubsub_subscribe(user_id) do
     for prefix <- ~w(nodes packets metrics topology) do
@@ -166,8 +166,13 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   end
 
   def handle_event("set_entry_node", %{"entry_node" => id}, socket) do
-    TrafficSimulator.set_entry_node(socket.assigns.user_id, id)
-    {:noreply, assign(socket, :entry_node, id)}
+    # Solo un load balancer de la topología actual puede ser entrada de tráfico.
+    if id in socket.assigns.entry_candidates do
+      TrafficSimulator.set_entry_node(socket.assigns.user_id, id)
+      {:noreply, assign(socket, :entry_node, id)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("toggle_chaos_monkey", _params, socket) do
@@ -233,16 +238,23 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   end
 
   def handle_event("connect_nodes", %{"from" => from, "to" => to}, socket) when from != to do
-    if creates_cycle?(socket.assigns.nodes, from, to) do
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "Esa conexión cerraría un ciclo — el tráfico daría vueltas para siempre"
-       )}
-    else
-      NodeServer.connect(socket.assigns.user_id, from, to)
-      {:noreply, socket}
+    nodes = socket.assigns.nodes
+
+    cond do
+      not (Map.has_key?(nodes, from) and Map.has_key?(nodes, to)) ->
+        {:noreply, socket}
+
+      creates_cycle?(nodes, from, to) ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Esa conexión cerraría un ciclo — el tráfico daría vueltas para siempre"
+         )}
+
+      true ->
+        NodeServer.connect(socket.assigns.user_id, from, to)
+        {:noreply, socket}
     end
   end
 
@@ -256,9 +268,14 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
   # Chaos actions
 
   def handle_event("kill_node", %{"id" => id}, socket) do
-    NodeSupervisor.kill_node(socket.assigns.user_id, id)
-    nodes = Map.update!(socket.assigns.nodes, id, &%{&1 | status: :dead})
-    {:noreply, assign(socket, :nodes, nodes)}
+    # Un id que no está en el canvas (evento empujado a mano) se ignora en vez de crashear la LiveView.
+    if Map.has_key?(socket.assigns.nodes, id) do
+      NodeSupervisor.kill_node(socket.assigns.user_id, id)
+      nodes = Map.update!(socket.assigns.nodes, id, &%{&1 | status: :dead})
+      {:noreply, assign(socket, :nodes, nodes)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("revive_node", %{"id" => id}, socket) do
@@ -269,11 +286,17 @@ defmodule ChaosPlaygroundWeb.PlaygroundLive do
         {:noreply, socket}
 
       spec ->
-        {:ok, _pid} = NodeSupervisor.start_node(user_id, id: spec.id, type: spec.type)
+        # Revivir un nodo que ya está vivo devuelve {:error, {:already_started, _}}: no es un
+        # error, solo no hay nada que hacer (antes un `{:ok, _} =` crasheaba la LiveView).
+        case NodeSupervisor.start_node(user_id, id: spec.id, type: spec.type) do
+          {:ok, _pid} ->
+            socket.assigns.topology.connections
+            |> Enum.filter(fn [from, _to] -> from == id end)
+            |> Enum.each(fn [_from, to] -> NodeServer.connect(user_id, id, to) end)
 
-        socket.assigns.topology.connections
-        |> Enum.filter(fn [from, _to] -> from == id end)
-        |> Enum.each(fn [_from, to] -> NodeServer.connect(user_id, id, to) end)
+          {:error, {:already_started, _pid}} ->
+            :ok
+        end
 
         {:noreply, socket}
     end

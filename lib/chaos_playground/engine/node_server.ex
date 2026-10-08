@@ -10,6 +10,11 @@ defmodule ChaosPlayground.Engine.NodeServer do
 
   defstruct [:id, :user_id, :type, :status, :latency_ms, :failure_rate, :connections]
 
+  # Tope de la latencia inyectable. handle_packet/3 duerme `latency_ms` dentro de un GenServer.call
+  # (timeout de 5s por defecto): sin tope, un valor >= 5000 haría salir por :timeout al Task del
+  # paquete y dejaría al nodo bloqueado en el sleep. Coincide con el max="2000" del slider.
+  @max_latency_ms 2_000
+
   @type status :: :healthy | :degraded | :dead
   @type t :: %__MODULE__{
           id: String.t(),
@@ -56,7 +61,7 @@ defmodule ChaosPlayground.Engine.NodeServer do
   def handle_packet(user_id, id, packet), do: call(user_id, id, {:handle_packet, packet})
 
   def set_latency(user_id, id, ms) when is_integer(ms) and ms >= 0,
-    do: cast(user_id, id, {:set_latency, ms})
+    do: cast(user_id, id, {:set_latency, min(ms, @max_latency_ms)})
 
   def set_failure_rate(user_id, id, rate) when is_float(rate) and rate >= 0.0 and rate <= 1.0,
     do: cast(user_id, id, {:set_failure_rate, rate})

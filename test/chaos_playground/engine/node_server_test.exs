@@ -39,6 +39,16 @@ defmodule ChaosPlayground.Engine.NodeServerTest do
     assert NodeServer.get_state(user_id, id).status == :degraded
   end
 
+  test "caps injected latency so a packet can't outlive the GenServer.call timeout", %{
+    user_id: user_id,
+    id: id
+  } do
+    :ok = NodeServer.set_latency(user_id, id, 60_000)
+    Process.sleep(10)
+
+    assert NodeServer.get_state(user_id, id).latency_ms == 2_000
+  end
+
   test "tracks connections idempotently", %{user_id: user_id, id: id} do
     :ok = NodeServer.connect(user_id, id, "neighbor-a")
     :ok = NodeServer.connect(user_id, id, "neighbor-a")
